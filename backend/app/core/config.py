@@ -4,6 +4,29 @@ from pathlib import Path
 from pydantic import BaseModel
 
 _DEFAULT_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
+
+# Cargar automáticamente el archivo .env si existe
+_env_file = _DEFAULT_BASE_DIR / ".env"
+try:
+    from dotenv import load_dotenv
+    if _env_file.is_file():
+        load_dotenv(dotenv_path=_env_file)
+    else:
+        load_dotenv()
+except ImportError:
+    if _env_file.is_file():
+        try:
+            with open(_env_file, "r", encoding="utf-8") as _f:
+                for _line in _f:
+                    _line = _line.strip()
+                    if _line and not _line.startswith("#") and "=" in _line:
+                        _k, _v = _line.split("=", 1)
+                        _k, _v = _k.strip(), _v.strip().strip("'\"")
+                        if _k not in os.environ:
+                            os.environ[_k] = _v
+        except Exception:
+            pass
+
 BASE_DIR = Path(os.getenv("BASE_DIR", str(_DEFAULT_BASE_DIR)))
 DOWNLOADS_DIR = Path(os.getenv("DOWNLOADS_DIR", str(BASE_DIR / "downloads")))
 FRONTEND_DIR = Path(os.getenv("FRONTEND_DIR", str(BASE_DIR / "frontend")))
