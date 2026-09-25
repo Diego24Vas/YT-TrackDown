@@ -34,6 +34,14 @@
           YT-TrackDown <span class="brand-badge">MP3</span>
         </div>
       </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn-cookie-status" id="btn-open-cookies" title="Gestionar cookies de sesión de YouTube">
+          <span class="cookie-dot" id="cookie-status-dot"></span>
+          <span class="cookie-icon">🍪</span>
+          <span class="cookie-text" id="cookie-btn-label">Cookies</span>
+        </button>
+      </div>
     </header>
 
     <!-- Hero / Input Section -->
@@ -263,6 +271,89 @@
       </div>
     </section>
 
+  </div>
+
+  <!-- Cookies Configuration Modal -->
+  <div class="modal-backdrop" id="cookies-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="cookies-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge">🍪</div>
+          <div>
+            <h3 class="modal-title" id="cookies-modal-title">Cookies de YouTube</h3>
+            <p class="modal-subtitle">Permite descargar videos con restricción de edad (+18) o privados</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="btn-close-cookies-modal" aria-label="Cerrar modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Current Status Box -->
+        <div class="cookie-status-box" id="cookie-status-box">
+          <div class="status-indicator-row">
+            <span class="status-badge" id="cookie-modal-badge">Cargando estado...</span>
+            <span class="status-info-text" id="cookie-modal-details"></span>
+          </div>
+          <div class="cookie-actions-row" id="cookie-delete-wrap" style="display: none;">
+            <button type="button" class="btn btn-secondary btn-ghost btn-sm text-danger" id="btn-delete-cookies">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Eliminar cookies
+            </button>
+          </div>
+        </div>
+
+        <!-- File Upload Area -->
+        <div class="cookie-upload-dropzone" id="cookie-dropzone">
+          <input type="file" id="cookie-file-input" accept=".txt" style="display: none;">
+          <div class="dropzone-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="dropzone-text">
+            <strong>Haz clic para seleccionar</strong> o arrastra tu archivo <code>cookies.txt</code> aquí
+          </div>
+          <div class="dropzone-hint">Formato Netscape exportado desde tu navegador</div>
+        </div>
+
+        <!-- Guide / Instructions Accordion -->
+        <details class="cookie-guide-details">
+          <summary class="cookie-guide-summary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            ¿Cómo exportar cookies.txt de YouTube en 1 minuto?
+          </summary>
+          <div class="cookie-guide-content">
+            <ol>
+              <li>Instala en tu navegador una extensión segura como <strong>Get cookies.txt LOCALLY</strong> (disponible para Chrome, Brave, Firefox, Edge).</li>
+              <li>Abre <strong>youtube.com</strong> y asegúrate de haber iniciado sesión con tu cuenta mayor de 18 años.</li>
+              <li>Abre la extensión y pulsa en <strong>Export</strong> (descargará un archivo llamado <code>cookies.txt</code>).</li>
+              <li>Arrastra o sube ese archivo aquí. ¡Listo! Ya podrás descargar canciones y videos con restricción de edad.</li>
+            </ol>
+            <p class="guide-note">
+              <em>Nota de privacidad:</em> Tus cookies quedan guardadas únicamente en tu propia instancia y nunca se envían a servidores externos.
+            </p>
+          </div>
+        </details>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btn-close-cookies-modal-footer">Cerrar</button>
+      </div>
+    </div>
   </div>
 
   <!-- Toast Notification Container -->

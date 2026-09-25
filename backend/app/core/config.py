@@ -1,6 +1,7 @@
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 from pydantic import BaseModel
 
 _DEFAULT_BASE_DIR = Path(__file__).resolve().parent.parent.parent.parent
@@ -30,6 +31,8 @@ except ImportError:
 BASE_DIR = Path(os.getenv("BASE_DIR", str(_DEFAULT_BASE_DIR)))
 DOWNLOADS_DIR = Path(os.getenv("DOWNLOADS_DIR", str(BASE_DIR / "downloads")))
 FRONTEND_DIR = Path(os.getenv("FRONTEND_DIR", str(BASE_DIR / "frontend")))
+COOKIES_DIR = Path(os.getenv("COOKIES_DIR", str(BASE_DIR / "cookies")))
+COOKIES_FILE = Path(os.getenv("COOKIES_FILE", str(COOKIES_DIR / "cookies.txt")))
 
 class Settings(BaseModel):
     PROJECT_NAME: str = "YT-TrackDown"
@@ -41,6 +44,8 @@ class Settings(BaseModel):
     BASE_DIR: Path = BASE_DIR
     DOWNLOADS_DIR: Path = DOWNLOADS_DIR
     FRONTEND_DIR: Path = FRONTEND_DIR
+    COOKIES_DIR: Path = COOKIES_DIR
+    COOKIES_FILE: Path = COOKIES_FILE
     
     # External Tools (detected dynamically with fallback)
     FFMPEG_LOCATION: str = os.getenv(
@@ -65,7 +70,35 @@ class Settings(BaseModel):
     def FILE_RETENTION_SECONDS(self) -> int:
         return self.FILE_RETENTION_MINUTES * 60
 
+    def get_active_cookies_file(self) -> Optional[Path]:
+        """
+        Locates the first existing and non-empty cookies file.
+        Checks:
+        1. Configured COOKIES_FILE
+        2. COOKIES_DIR / 'cookies.txt'
+        3. BASE_DIR / 'cookies.txt'
+        4. DOWNLOADS_DIR / 'cookies.txt'
+        5. Common container paths (/app/cookies/cookies.txt, /app/cookies.txt)
+        """
+        candidate_paths = [
+            self.COOKIES_FILE,
+            self.COOKIES_DIR / "cookies.txt",
+            self.BASE_DIR / "cookies.txt",
+            self.DOWNLOADS_DIR / "cookies.txt",
+            Path("/app/cookies/cookies.txt"),
+            Path("/app/cookies.txt"),
+        ]
+        
+        for path in candidate_paths:
+            try:
+                if path.is_file() and path.stat().st_size > 0:
+                    return path
+            except Exception:
+                continue
+        return None
+
 settings = Settings()
 
-# Ensure downloads directory exists
+# Ensure directories exist
 settings.DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+settings.COOKIES_DIR.mkdir(parents=True, exist_ok=True)

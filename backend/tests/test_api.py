@@ -100,4 +100,34 @@ def test_preview_urls(client, monkeypatch):
     assert data["items"][0]["duration_str"] == "3:05"
     assert data["items"][1]["title"] == "Preview Song 2"
 
+def test_cookies_endpoints(client):
+    # Check initial status
+    res = client.get("/api/cookies")
+    assert res.status_code == 200
+    status_data = res.json()
+    assert "has_cookies" in status_data
+
+    # Upload test cookie file
+    dummy_cookie_content = (
+        "# Netscape HTTP Cookie File\n"
+        ".youtube.com\tTRUE\t/\tTRUE\t2147483647\tSID\tmock_session_token_value\n"
+    )
+    files = {"file": ("cookies.txt", dummy_cookie_content.encode("utf-8"), "text/plain")}
+    up_res = client.post("/api/cookies/upload", files=files)
+    assert up_res.status_code == 200
+    up_data = up_res.json()
+    assert up_data["success"] is True
+    assert up_data["status"]["has_cookies"] is True
+
+    # Verify status changed
+    res2 = client.get("/api/cookies")
+    assert res2.status_code == 200
+    assert res2.json()["has_cookies"] is True
+
+    # Delete cookies
+    del_res = client.delete("/api/cookies")
+    assert del_res.status_code == 200
+    assert del_res.json()["success"] is True
+    assert del_res.json()["status"]["has_cookies"] is False
+
 

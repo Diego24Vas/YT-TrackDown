@@ -90,14 +90,21 @@ class DownloaderService:
             item.status = DownloadStatus.ERROR
             # Human readable message
             err_str = str(e)
-            if "Video unavailable" in err_str:
-                item.error_message = "El video no está disponible (privado o eliminado)."
-            elif "Sign in to confirm you're not a bot" in err_str:
-                item.error_message = "YouTube solicitó verificación antibot para este video."
+            if "Sign in to confirm your age" in err_str or "confirm your age" in err_str:
+                if self.adapter.has_cookies():
+                    item.error_message = "Restricción de edad (+18): Las cookies actuales no tienen acceso o caducaron. Actualiza cookies.txt."
+                else:
+                    item.error_message = "Restricción de edad (+18): Requiere iniciar sesión. Configura tus cookies de YouTube en la barra superior."
+            elif "Sign in to confirm you're not a bot" in err_str or ("bot" in err_str.lower() and "confirm" in err_str.lower()):
+                item.error_message = "YouTube solicitó verificación antibot. Configura cookies de YouTube en la barra superior para continuar."
+            elif "Video unavailable" in err_str:
+                item.error_message = "El video no está disponible (privado, eliminado o bloqueado en tu región)."
             elif "Private video" in err_str:
-                item.error_message = "Este video es privado."
+                item.error_message = "Este video es privado. Requiere cookies de una cuenta con permiso de visualización."
+            elif "members-only" in err_str.lower() or "join this channel" in err_str.lower():
+                item.error_message = "Este video es exclusivo para miembros del canal de YouTube."
             else:
-                item.error_message = f"Error al procesar: {err_str[:120]}"
+                item.error_message = f"Error al procesar: {err_str[:130]}"
 
             notify_status(item.id, DownloadStatus.ERROR)
             return item

@@ -1,7 +1,7 @@
 import os
 import asyncio
 import urllib.parse
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, UploadFile, File
 from fastapi.responses import FileResponse
 from backend.app.domain.models import (
     BatchDownloadRequest,
@@ -188,3 +188,62 @@ async def export_all_zip(background_tasks: BackgroundTasks):
 async def get_system_stats():
     """Returns current system queue counts."""
     return queue_service.get_stats()
+
+@router.get("/cookies")
+async def get_cookies_status():
+    """Returns the current status of configured YouTube authentication cookies."""
+    return ytdlp_adapter.get_cookies_status()
+
+@router.post("/cookies/upload")
+async def upload_cookies(file: UploadFile = File(...)):
+    """
+    Uploads and validates a cookies.txt file to authenticate with YouTube
+    for age-restricted, members-only, or private videos.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Debe seleccionar un archivo válido.")
+
+    content_bytes = await file.read()
+    if not content_bytes or len(content_bytes) == 0:
+        raise HTTPException(status_code=400, detail="El archivo de cookies está vacío.")
+
+    if len(content_bytes) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="El archivo de cookies excede el tamaño máximo permitido (5MB).")
+
+    try:
+        content_text = content_bytes.decode("utf-8", errors="ignore")
+    except Exception:
+        raise HTTPException(status_code=400, detail="No se pudo decodificar el contenido del archivo de cookies.")
+
+    # Validate basic Netscape cookie format or presence of domain info
+    lines = content_text.splitlines()
+    has_valid_cookie_lines = any(
+        "\t" in line and len(line.split("\t")) >= 5
+        for line in lines
+        if line.strip() and not line.strip().startswith("#")
+    )
+    is_netscape_header = any("# Netscape HTTP Cookie File" in line for line in lines[:5])
+    has_youtube_domain = "youtube.com" in content_text.lower() or "google.com" in content_text.lower()
+
+    if not (has_valid_cookie_lines or is_netscape_header or has_youtube_domain):
+        raise HTTPException(
+            status_code=400,
+            detail="El formato del archivo no parece ser un cookies.txt válido (formato Netscape)."
+        )
+
+    status = ytdlp_adapter.save_cookies(content_bytes)
+    return {
+        "success": True,
+        "message": "Archivo cookies.txt cargado y activado correctamente.",
+        "status": status,
+    }
+
+@router.delete("/cookies")
+async def delete_cookies():
+    """Removes configured cookies and resets to anonymous mode."""
+    deleted = ytdlp_adapter.delete_cookies()
+    return {
+        "success": True,
+        "message": "Cookies eliminadas correctamente." if deleted else "No se encontraron cookies para eliminar.",
+        "status": ytdlp_adapter.get_cookies_status(),
+    }

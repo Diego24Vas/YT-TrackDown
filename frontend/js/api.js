@@ -62,6 +62,32 @@ export const api = {
     return `/api/downloads/export/zip`;
   },
 
+  async getCookiesStatus() {
+    const res = await fetch("/api/cookies");
+    if (!res.ok) throw new Error("Error al consultar estado de cookies");
+    return res.json();
+  },
+
+  async uploadCookies(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/cookies/upload", {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: "Error al subir cookies" }));
+      throw new Error(err.detail || "Error al procesar el archivo");
+    }
+    return res.json();
+  },
+
+  async deleteCookies() {
+    const res = await fetch("/api/cookies", { method: "DELETE" });
+    if (!res.ok) throw new Error("Error al eliminar cookies");
+    return res.json();
+  },
+
   /**
    * Connects to Server-Sent Events stream for non-blocking live progress
    */

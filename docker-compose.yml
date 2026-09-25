@@ -14,6 +14,8 @@ services:
       - DEFAULT_AUDIO_QUALITY=${DEFAULT_AUDIO_QUALITY:-192}
       - FILE_RETENTION_MINUTES=${FILE_RETENTION_MINUTES:-15}
       - CLEANUP_CHECK_INTERVAL_SECONDS=${CLEANUP_CHECK_INTERVAL_SECONDS:-30}
+      - COOKIES_FILE=${COOKIES_FILE:-/app/cookies/cookies.txt}
     volumes:
       - ./downloads:/app/downloads:z
+      - ./cookies:/app/cookies:z
       - ./frontend:/app/frontend:ro,z

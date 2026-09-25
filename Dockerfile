@@ -4,12 +4,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies: FFmpeg, Node.js, and CA certificates
+# Install system dependencies: FFmpeg, Node.js, Deno, and CA certificates
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     nodejs \
     ca-certificates \
     curl \
+    unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
     && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated non-root user matching standard host UID/GID 1000
@@ -27,15 +29,16 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY backend /app/backend
 COPY frontend /app/frontend
 
-# Create downloads volume directory with correct ownership
-RUN mkdir -p /app/downloads && chown -R appuser:appgroup /app
+# Create downloads and cookies volume directories with correct ownership
+RUN mkdir -p /app/downloads /app/cookies && chown -R appuser:appgroup /app
 
 USER appuser
 
 ENV HOST=0.0.0.0 \
     PORT=8080 \
     FFMPEG_LOCATION=/usr/bin/ffmpeg \
-    NODE_PATH=/usr/bin/node
+    NODE_PATH=/usr/bin/node \
+    DENO_PATH=/usr/local/bin/deno
 
 EXPOSE 8080
 

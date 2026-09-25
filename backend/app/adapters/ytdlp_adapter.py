@@ -3,6 +3,7 @@ import re
 import logging
 from typing import Callable, Optional, Dict, Any
 from pathlib import Path
+from datetime import datetime
 import yt_dlp
 
 from backend.app.core.config import settings
@@ -17,15 +18,17 @@ class YtDlpAdapter:
 
     def _get_base_opts(self) -> Dict[str, Any]:
         """Returns standard options for yt_dlp extraction and downloading."""
-        opts = {
+        opts: Dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
             "ffmpeg_location": self.ffmpeg_location,
-            "js_runtimes": {"node": {}},
             "remote_components": ["ejs:github"],
             "noplaylist": True,
             "updatetime": False,
         }
+        active_cookies = settings.get_active_cookies_file()
+        if active_cookies:
+            opts["cookiefile"] = str(active_cookies)
         return opts
 
     def expand_url(self, url: str) -> list[Dict[str, Any]]:
@@ -34,15 +37,17 @@ class YtDlpAdapter:
         using fast flat extraction without downloading video streams.
         If it's a single track, returns a 1-item list.
         """
-        flat_opts = {
+        flat_opts: Dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
             "extract_flat": "in_playlist",
             "skip_download": True,
             "ffmpeg_location": self.ffmpeg_location,
-            "js_runtimes": {"node": {}},
             "remote_components": ["ejs:github"],
         }
+        active_cookies = settings.get_active_cookies_file()
+        if active_cookies:
+            flat_opts["cookiefile"] = str(active_cookies)
         
         try:
             with yt_dlp.YoutubeDL(flat_opts) as ydl:
@@ -243,5 +248,77 @@ class YtDlpAdapter:
                 "duration_str": storage_adapter.format_duration(duration),
                 "thumbnail": thumbnail,
             }
+
+    def has_cookies(self) -> bool:
+        """Returns True if a valid cookies file is detected."""
+        return settings.get_active_cookies_file() is not None
+
+    def get_cookies_status(self) -> Dict[str, Any]:
+        """Returns status metadata about current cookies configuration."""
+        active_file = settings.get_active_cookies_file()
+        if not active_file:
+            return {
+                "has_cookies": False,
+                "file_name": None,
+                "file_path": None,
+                "size_bytes": 0,
+                "size_str": "0 B",
+                "updated_at": None,
+                "valid_lines": 0,
+            }
+
+        stat = active_file.stat()
+        valid_lines = 0
+        try:
+            with open(active_file, "r", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped and not stripped.startswith("#"):
+                        valid_lines += 1
+        except Exception:
+            pass
+
+        return {
+            "has_cookies": True,
+            "file_name": active_file.name,
+            "file_path": str(active_file),
+            "size_bytes": stat.st_size,
+            "size_str": storage_adapter.format_bytes(stat.st_size),
+            "updated_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "valid_lines": valid_lines,
+        }
+
+    def save_cookies(self, content: str | bytes) -> Dict[str, Any]:
+        """Saves or updates cookies.txt in the configured COOKIES_FILE path."""
+        target_path = settings.COOKIES_FILE
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(content, str):
+            with open(target_path, "w", encoding="utf-8") as f:
+                f.write(content)
+        else:
+            with open(target_path, "wb") as f:
+                f.write(content)
+
+        return self.get_cookies_status()
+
+    def delete_cookies(self) -> bool:
+        """Deletes any configured cookies file."""
+        deleted = False
+        candidates = [
+            settings.COOKIES_FILE,
+            settings.COOKIES_DIR / "cookies.txt",
+            settings.BASE_DIR / "cookies.txt",
+            settings.DOWNLOADS_DIR / "cookies.txt",
+            Path("/app/cookies/cookies.txt"),
+        ]
+        for p in candidates:
+            try:
+                if p.is_file():
+                    p.unlink()
+                    deleted = True
+            except Exception as e:
+                logger.warning(f"Could not delete cookie file {p}: {e}")
+        return deleted
 
 ytdlp_adapter = YtDlpAdapter()

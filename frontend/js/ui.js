@@ -427,5 +427,42 @@ export const ui = {
       return;
     }
     container.innerHTML = items.map((i) => this.createPreviewCardHtml(i)).join("");
+  },
+
+  /**
+   * Updates UI state based on active cookies status
+   */
+  updateCookiesStatusUI(status) {
+    const dot = document.getElementById("cookie-status-dot");
+    const label = document.getElementById("cookie-btn-label");
+    const badge = document.getElementById("cookie-modal-badge");
+    const details = document.getElementById("cookie-modal-details");
+    const deleteWrap = document.getElementById("cookie-delete-wrap");
+
+    if (dot) {
+      dot.classList.toggle("is-active", Boolean(status && status.has_cookies));
+    }
+    if (label) {
+      label.textContent = status && status.has_cookies ? "Cookies activas" : "Cookies";
+    }
+    if (badge) {
+      if (status && status.has_cookies) {
+        badge.className = "status-badge badge-active";
+        badge.textContent = "● Cookies activas";
+      } else {
+        badge.className = "status-badge badge-inactive";
+        badge.textContent = "○ Sin cookies";
+      }
+    }
+    if (details) {
+      if (status && status.has_cookies) {
+        details.textContent = `${status.size_str || ""} • ${status.valid_lines || 0} cookies cargadas`;
+      } else {
+        details.textContent = "Para videos con restricción de edad (+18)";
+      }
+    }
+    if (deleteWrap) {
+      deleteWrap.style.display = status && status.has_cookies ? "flex" : "none";
+    }
   }
 };

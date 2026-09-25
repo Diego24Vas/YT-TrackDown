@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# YouTube authentication cookies
+cookies.txt
+cookies/*.txt
+!cookies/.gitkeep
+!cookies/README.md
