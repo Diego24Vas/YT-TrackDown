@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>YT-TrackDown — Descargador de Audio MP3</title>
   
   <!-- Favicons -->
@@ -11,10 +11,10 @@
   <link rel="shortcut icon" href="favicon.ico?v=1.4.5">
   
   <!-- Modular Stylesheets -->
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/components.css?v=1.4.5">
-  <link rel="stylesheet" href="css/layout.css?v=1.4.5">
+  <link rel="stylesheet" href="css/variables.css?v=1.4.7">
+  <link rel="stylesheet" href="css/base.css?v=1.4.7">
+  <link rel="stylesheet" href="css/components.css?v=1.4.7">
+  <link rel="stylesheet" href="css/layout.css?v=1.4.7">
 </head>
 <body>
 
@@ -92,9 +92,11 @@
                 aria-expanded="false"
                 title="Seleccionar calidad de audio"
               >
-                <span class="custom-select-label">Calidad:</span>
-                <span class="custom-select-value" id="quality-current-label">192 kbps</span>
-                <span class="custom-select-badge badge-std" id="quality-current-badge">Estándar</span>
+                <span class="custom-select-trigger-content">
+                  <span class="custom-select-label">Calidad:</span>
+                  <span class="custom-select-value" id="quality-current-label">192 kbps</span>
+                  <span class="custom-select-badge badge-std" id="quality-current-badge">Estándar</span>
+                </span>
                 <svg class="custom-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
@@ -213,13 +215,13 @@
         <div class="queue-title-wrap">
           <h2 class="queue-title">Cola de descargas</h2>
           <span class="queue-counter tabular" id="queue-counter">0/0</span>
-          <span style="font-size: 0.78rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;" title="Los archivos MP3 se conservan en el servidor durante 15 minutos tras completarse">
+          <span class="queue-retention-badge" title="Los archivos MP3 se conservan en el servidor durante 15 minutos tras completarse">
             ⏱️ Disponibles 15 min
           </span>
         </div>
 
         <!-- Filter tabs & Batch actions -->
-        <div class="queue-controls" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="queue-controls">
           <div class="filter-tabs">
             <button class="filter-tab active" data-filter="all">Todos</button>
             <button class="filter-tab" data-filter="downloading">En proceso</button>
@@ -267,6 +269,6 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Main Script -->
-  <script type="module" src="js/app.js?v=1.4.5"></script>
+  <script type="module" src="js/app.js?v=1.4.7"></script>
 </body>
 </html>

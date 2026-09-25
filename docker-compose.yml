@@ -15,5 +15,5 @@ services:
       - FILE_RETENTION_MINUTES=${FILE_RETENTION_MINUTES:-15}
       - CLEANUP_CHECK_INTERVAL_SECONDS=${CLEANUP_CHECK_INTERVAL_SECONDS:-30}
     volumes:
-      - ./downloads:/app/downloads
-      - ./frontend:/app/frontend:ro
+      - ./downloads:/app/downloads:z
+      - ./frontend:/app/frontend:ro,z

@@ -107,21 +107,33 @@ export const ui = {
     }
 
     const toast = document.createElement("div");
-    toast.className = "toast";
+    toast.className = `toast toast-${type}`;
 
     let iconHtml = icons.music;
     if (type === "success") iconHtml = icons.check;
     if (type === "error") iconHtml = icons.alert;
 
-    toast.innerHTML = `<span>${iconHtml}</span><span>${message}</span>`;
+    toast.innerHTML = `<span class="toast-icon">${iconHtml}</span><span class="toast-msg">${message}</span>`;
+    
+    // Smooth exit upwards
+    let isDismissed = false;
+    const dismiss = () => {
+      if (isDismissed) return;
+      isDismissed = true;
+      toast.style.transition = "opacity 0.25s ease, transform 0.25s ease";
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(-14px) scale(0.96)";
+      setTimeout(() => toast.remove(), 250);
+    };
+
+    // User can tap or click to dismiss immediately
+    toast.addEventListener("click", dismiss);
+
     container.appendChild(toast);
 
     setTimeout(() => {
-      toast.style.transition = "opacity 0.3s ease, transform 0.3s ease";
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(10px)";
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
+      if (toast.parentElement) dismiss();
+    }, 3200);
   },
 
   /**
@@ -232,7 +244,7 @@ export const ui = {
                 </a>
               </div>
             </div>
-            <div id="status-badge-${item.id}">
+            <div id="status-badge-${item.id}" class="item-status-wrapper">
               ${this.renderStatusBadge(item.status, percentage)}
             </div>
           </div>
@@ -253,7 +265,7 @@ export const ui = {
         </div>
 
         <div class="item-actions">
-          <div id="action-slot-${item.id}">
+          <div id="action-slot-${item.id}" class="item-action-slot">
             ${actionBtnHtml}
           </div>
           <button class="btn-icon btn-icon-danger btn-delete" data-id="${item.id}" title="Eliminar de la lista">
