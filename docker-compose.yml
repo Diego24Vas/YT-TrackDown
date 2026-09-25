@@ -1,0 +1,18 @@
+services:
+  ytdown:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ytdown_app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - MAX_CONCURRENT_DOWNLOADS=2
+      - DEFAULT_AUDIO_QUALITY=192
+      - FILE_RETENTION_MINUTES=15
+    volumes:
+      - ./downloads:/app/downloads
+      - ./frontend:/app/frontend:ro

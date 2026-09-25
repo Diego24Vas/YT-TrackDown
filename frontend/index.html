@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YT-TrackDown — Descargador de Audio MP3</title>
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1.4.5">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=1.4.5">
+  <link rel="shortcut icon" href="favicon.ico?v=1.4.5">
+  
+  <!-- Modular Stylesheets -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css?v=1.4.5">
+  <link rel="stylesheet" href="css/layout.css?v=1.4.5">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Application Header -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-logo-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+        </div>
+        <div class="brand-title">
+          YT-TrackDown <span class="brand-badge">MP3</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero / Input Section -->
+    <section class="hero-section" id="hero-section">
+      <div class="hero-header">
+        <h1 class="hero-title">Descarga audio en MP3</h1>
+        <p class="hero-subtitle">Pega uno o múltiples enlaces de YouTube. Descargas concurrentes en segundo plano sin bloqueos.</p>
+      </div>
+
+      <!-- Multi-link Composer -->
+      <div class="input-composer">
+        <textarea 
+          id="composer-textarea" 
+          class="composer-textarea" 
+          placeholder="Pega aquí tus enlaces (uno por línea o separados por espacio)"
+          spellcheck="false"
+        ></textarea>
+
+        <div class="composer-footer">
+          <div class="composer-tools">
+            <span class="link-counter-chip" id="link-counter-chip">0 enlaces</span>
+
+            <button type="button" class="btn btn-secondary btn-ghost composer-tool-btn" id="btn-paste-clipboard" title="Pegar enlaces desde el portapapeles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              Pegar
+            </button>
+
+            <button type="button" class="btn btn-secondary btn-ghost composer-tool-btn" id="btn-clear-composer" style="display: none;" title="Limpiar enlaces del campo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Limpiar
+            </button>
+
+          </div>
+
+          <div class="composer-actions">
+            <!-- Custom Styled Quality Select Dropdown -->
+            <div class="custom-select-dropdown" id="quality-dropdown-wrap">
+              <select id="select-quality" style="display: none;" aria-hidden="true">
+                <option value="320">320 kbps</option>
+                <option value="256">256 kbps</option>
+                <option value="192" selected>192 kbps</option>
+                <option value="128">128 kbps</option>
+              </select>
+
+              <button
+                type="button"
+                class="custom-select-trigger"
+                id="quality-trigger-btn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                title="Seleccionar calidad de audio"
+              >
+                <span class="custom-select-label">Calidad:</span>
+                <span class="custom-select-value" id="quality-current-label">192 kbps</span>
+                <span class="custom-select-badge badge-std" id="quality-current-badge">Estándar</span>
+                <svg class="custom-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              <div class="custom-select-menu" id="quality-options-menu" role="listbox" tabindex="-1">
+                <div class="custom-select-header">
+                  <span>Tasa de bits (Bitrate)</span>
+                </div>
+
+                <div class="custom-select-option" data-value="320" role="option">
+                  <div class="option-content">
+                    <div class="option-title-row">
+                      <span class="option-title">320 kbps</span>
+                      <span class="option-badge badge-max">Máxima</span>
+                    </div>
+                    <div class="option-desc">Mayor fidelidad de audio</div>
+                  </div>
+                  <svg class="option-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+
+                <div class="custom-select-option" data-value="256" role="option">
+                  <div class="option-content">
+                    <div class="option-title-row">
+                      <span class="option-title">256 kbps</span>
+                      <span class="option-badge badge-high">Alta</span>
+                    </div>
+                    <div class="option-desc">Excelente claridad y balance</div>
+                  </div>
+                  <svg class="option-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+
+                <div class="custom-select-option is-selected" data-value="192" role="option" aria-selected="true">
+                  <div class="option-content">
+                    <div class="option-title-row">
+                      <span class="option-title">192 kbps</span>
+                      <span class="option-badge badge-std">Estándar</span>
+                    </div>
+                    <div class="option-desc">Rápido, recomendado para todo uso</div>
+                  </div>
+                  <svg class="option-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+
+                <div class="custom-select-option" data-value="128" role="option">
+                  <div class="option-content">
+                    <div class="option-title-row">
+                      <span class="option-title">128 kbps</span>
+                      <span class="option-badge badge-light">Ligera</span>
+                    </div>
+                    <div class="option-desc">Descarga rápida, archivo liviano</div>
+                  </div>
+                  <svg class="option-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-primary" id="btn-submit-downloads" disabled>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              Previsualizar y Añadir
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Preview / Staging Section -->
+    <section class="preview-section" id="preview-section" style="display: none;">
+      <div class="preview-header">
+        <div class="preview-title-wrap">
+          <h2 class="preview-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+            Pistas preparadas
+          </h2>
+          <span class="queue-counter tabular" id="preview-counter">0</span>
+        </div>
+
+        <div class="preview-actions-bar">
+          <button type="button" class="btn btn-secondary btn-ghost" id="btn-clear-preview" style="padding: 6px 12px; font-size: 0.82rem;">
+            Limpiar lista
+          </button>
+
+          <button type="button" class="btn btn-success" id="btn-download-all-preview" style="padding: 8px 16px; font-size: 0.88rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Descargar todo (<span id="preview-btn-count">0</span> MP3)
+          </button>
+        </div>
+      </div>
+
+      <div class="preview-list" id="preview-list">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Downloads Queue Section -->
+    <section class="queue-section">
+      <div class="queue-header">
+        <div class="queue-title-wrap">
+          <h2 class="queue-title">Cola de descargas</h2>
+          <span class="queue-counter tabular" id="queue-counter">0/0</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;" title="Los archivos MP3 se conservan en el servidor durante 15 minutos tras completarse">
+            ⏱️ Disponibles 15 min
+          </span>
+        </div>
+
+        <!-- Filter tabs & Batch actions -->
+        <div class="queue-controls" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">Todos</button>
+            <button class="filter-tab" data-filter="downloading">En proceso</button>
+            <button class="filter-tab" data-filter="completed">Completados</button>
+            <button class="filter-tab" data-filter="error">Con error</button>
+          </div>
+
+          <div class="queue-actions">
+            <button class="btn btn-success" id="btn-download-zip" style="display: none; padding: 6px 12px; font-size: 0.82rem;" title="Descargar todos los completados como archivo .zip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                <rect x="1" y="3" width="22" height="5"></rect>
+                <line x1="10" y1="12" x2="14" y2="12"></line>
+              </svg>
+              Descargar ZIP
+            </button>
+
+            <button class="btn btn-secondary btn-ghost" id="btn-clear-completed" style="display: none; padding: 6px 10px; font-size: 0.82rem;" title="Limpiar elementos completados">
+              Limpiar completados
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Items List Container -->
+      <div class="queue-list" id="queue-list">
+        <!-- Rendered dynamically by ui.js -->
+        <div class="empty-queue">
+          <div class="empty-icon">
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <div class="empty-title">No hay descargas en la cola</div>
+          <div class="empty-desc">Pega uno o más enlaces en el campo superior para comenzar a descargar tus pistas en formato MP3.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Main Script -->
+  <script type="module" src="js/app.js?v=1.4.5"></script>
+</body>
+</html>
