@@ -207,39 +207,73 @@ class QueueService:
         urls: List[str],
         quality: str = "192",
         format: DownloadFormat = DownloadFormat.MP3,
+        metadata_items: Optional[List[Any]] = None,
     ) -> List[DownloadItem]:
-        """Validates and enqueues a batch of URLs, automatically expanding any playlists."""
+        """Validates and enqueues a batch of URLs, automatically expanding any playlists concurrently."""
         created_items: List[DownloadItem] = []
-        for raw_url in urls:
-            url = raw_url.strip()
-            if not url or not (url.startswith("http://") or url.startswith("https://")):
-                continue
+        handled_urls = set()
 
-            try:
-                expanded = await asyncio.to_thread(ytdlp_adapter.expand_url, url)
-            except Exception as e:
-                logger.warning(f"Error expanding {url}: {e}")
-                expanded = [{"url": url}]
-
-            for entry in expanded:
-                v_url = entry.get("url")
-                if not v_url:
+        # 1. Process items with pre-resolved metadata (instantaneous)
+        if metadata_items:
+            for meta in metadata_items:
+                v_url = (meta.url if hasattr(meta, "url") else meta.get("url", "")).strip()
+                if not v_url or not (v_url.startswith("http://") or v_url.startswith("https://")):
                     continue
+                handled_urls.add(v_url)
                 item = DownloadItem(
                     url=v_url,
                     quality=quality,
                     format=format,
                     status=DownloadStatus.QUEUED,
-                    title=entry.get("title"),
-                    artist=entry.get("artist"),
-                    duration=entry.get("duration"),
-                    duration_str=entry.get("duration_str"),
-                    thumbnail=entry.get("thumbnail"),
+                    title=meta.title if hasattr(meta, "title") else meta.get("title"),
+                    artist=meta.artist if hasattr(meta, "artist") else meta.get("artist"),
+                    duration=meta.duration if hasattr(meta, "duration") else meta.get("duration"),
+                    duration_str=meta.duration_str if hasattr(meta, "duration_str") else meta.get("duration_str"),
+                    thumbnail=meta.thumbnail if hasattr(meta, "thumbnail") else meta.get("thumbnail"),
                 )
                 self._items[item.id] = item
                 self.queue.put_nowait(item.id)
                 created_items.append(item)
                 self.broadcast_event("item_added", item.model_dump())
+
+        # 2. Process any raw URLs that still need expansion (concurrently)
+        remaining_urls = [u for u in (urls or []) if u.strip() not in handled_urls]
+        if remaining_urls:
+            async def process_raw_url(raw_url: str) -> List[DownloadItem]:
+                url = raw_url.strip()
+                if not url or not (url.startswith("http://") or url.startswith("https://")):
+                    return []
+                try:
+                    expanded = await asyncio.to_thread(ytdlp_adapter.expand_url, url)
+                except Exception as e:
+                    logger.warning(f"Error expanding {url}: {e}")
+                    expanded = [{"url": url}]
+
+                items: List[DownloadItem] = []
+                for entry in expanded:
+                    v_url = entry.get("url")
+                    if not v_url:
+                        continue
+                    item = DownloadItem(
+                        url=v_url,
+                        quality=quality,
+                        format=format,
+                        status=DownloadStatus.QUEUED,
+                        title=entry.get("title"),
+                        artist=entry.get("artist"),
+                        duration=entry.get("duration"),
+                        duration_str=entry.get("duration_str"),
+                        thumbnail=entry.get("thumbnail"),
+                    )
+                    self._items[item.id] = item
+                    self.queue.put_nowait(item.id)
+                    items.append(item)
+                    self.broadcast_event("item_added", item.model_dump())
+                return items
+
+            results = await asyncio.gather(*(process_raw_url(u) for u in remaining_urls))
+            for sublist in results:
+                created_items.extend(sublist)
 
         return created_items
 

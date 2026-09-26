@@ -205,9 +205,10 @@ export const ui = {
       ? `<span class="item-size-badge" title="Peso del archivo ${formatLabel}">${item.file_size_str}</span>`
       : "";
 
+    const isFetching = item.status === "fetching_info" || item.status === "queued";
     const thumbHtml = item.thumbnail
       ? `<img src="${item.thumbnail}" alt="" class="item-thumb-img" loading="lazy">`
-      : `<div class="item-thumb-placeholder">${isVideo ? icons.video : icons.music}</div>`;
+      : `<div class="item-thumb-placeholder ${isFetching ? 'skeleton-shimmer' : ''}">${isVideo ? icons.video : icons.music}</div>`;
 
     const durationHtml = item.duration_str
       ? `<span class="item-duration-badge">${item.duration_str}</span>`
@@ -217,6 +218,7 @@ export const ui = {
     if (item.status === "converting") progressFillClass = "converting";
     if (item.status === "completed") progressFillClass = "completed";
     if (item.status === "expired") progressFillClass = "expired";
+    if (item.status === "fetching_info") progressFillClass = "converting skeleton-shimmer";
 
     let actionBtnHtml = "";
     if (item.status === "completed") {
@@ -367,21 +369,38 @@ export const ui = {
   },
 
   /**
-   * Full render of list container
+   * Full render of list container with persistent pending skeletons
    */
-  renderList(container, items) {
-    if (!items || items.length === 0) {
+  renderList(container, items, pendingCount = 0, currentFormat = "mp3") {
+    if (!container) return;
+
+    const hasRealItems = items && items.length > 0;
+    const hasPendingSkeletons = pendingCount > 0;
+
+    if (!hasRealItems && !hasPendingSkeletons) {
+      container.querySelectorAll(".item-card-skeleton").forEach((el) => el.remove());
       container.innerHTML = `
         <div class="empty-queue">
           <div class="empty-icon">${icons.music}</div>
-          <div class="empty-title">No hay descargas en la cola</div>
-          <div class="empty-desc">Pega uno o más enlaces de YouTube en el campo superior para comenzar a descargar en formato MP3 o MP4.</div>
+          <div class="empty-title">No hay descargas en esta vista</div>
+          <div class="empty-desc">No se encontraron elementos correspondientes al filtro seleccionado.</div>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = items.map((i) => this.createCardHtml(i)).join("");
+    // Clean up empty queue placeholder if present
+    const emptyQueue = container.querySelector(".empty-queue");
+    if (emptyQueue) emptyQueue.remove();
+
+    // Render real items
+    const realHtml = hasRealItems ? items.map((i) => this.createCardHtml(i)).join("") : "";
+    container.innerHTML = realHtml;
+
+    // Append pending skeleton cards below real items
+    if (hasPendingSkeletons) {
+      this.appendQueueLoading(container, pendingCount, currentFormat);
+    }
   },
 
   /**
@@ -533,6 +552,62 @@ export const ui = {
     if (!container) return;
     container.innerHTML = "";
     this.appendPreviewLoading(container, count, currentFormat);
+  },
+
+  /**
+   * Appends skeleton card placeholders to download queue while starting downloads
+   */
+  appendQueueLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    const isVideo = currentFormat === "mp4";
+    const countClamped = Math.min(Math.max(count, 1), 20);
+
+    // Remove empty-queue state if present so skeleton cards display cleanly
+    const emptyQueue = container.querySelector(".empty-queue");
+    if (emptyQueue) emptyQueue.remove();
+
+    let skeletonsHtml = "";
+    for (let i = 0; i < countClamped; i++) {
+      skeletonsHtml += `
+        <div class="item-card item-card-skeleton" aria-hidden="true">
+          <div class="item-thumb-box skeleton-shimmer">
+            <div class="skeleton-thumb-icon">${isVideo ? icons.video : icons.music}</div>
+          </div>
+          <div class="item-content">
+            <div class="item-header-row">
+              <div style="min-width:0; flex:1;">
+                <div class="skeleton-shimmer skeleton-line skeleton-line-title"></div>
+                <div class="skeleton-shimmer skeleton-line skeleton-line-meta"></div>
+              </div>
+              <div class="item-status-wrapper">
+                <div class="skeleton-shimmer skeleton-badge-placeholder"></div>
+              </div>
+            </div>
+            <div class="progress-wrap" style="margin-top: 8px;">
+              <div class="skeleton-shimmer skeleton-progress-placeholder"></div>
+              <div class="progress-info-row tabular" style="margin-top: 4px;">
+                <div class="skeleton-shimmer skeleton-line" style="width: 25%; height: 10px;"></div>
+                <div class="skeleton-shimmer skeleton-line" style="width: 20%; height: 10px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <div class="skeleton-shimmer skeleton-btn-placeholder" style="width: 32px; height: 32px; border-radius: var(--radius-md);"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    container.insertAdjacentHTML("beforeend", skeletonsHtml);
+  },
+
+  /**
+   * Renders skeleton placeholders in download queue
+   */
+  renderQueueLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    container.innerHTML = "";
+    this.appendQueueLoading(container, count, currentFormat);
   },
 
   /**

@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=1.6.4";
-import { store } from "./store.js?v=1.6.4";
-import { ui, icons } from "./ui.js?v=1.6.4";
+import { api } from "./api.js?v=1.6.9";
+import { store } from "./store.js?v=1.6.9";
+import { ui, icons } from "./ui.js?v=1.6.9";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnClearComposer = document.getElementById("btn-clear-composer");
   const selectQuality = document.getElementById("select-quality");
   const queueList = document.getElementById("queue-list");
+  const queueSection = document.getElementById("queue-section");
   const connectionDot = document.getElementById("connection-dot");
   const filterTabs = document.querySelectorAll(".filter-tab");
   const btnDownloadZip = document.getElementById("btn-download-zip");
@@ -718,10 +719,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const format = currentFormat;
       const formatUpper = format.toUpperCase();
 
-      // 1. Instantly clear tray and chips
+      // 1. Immediately show queue section and register pending skeletons in store!
+      if (queueSection) {
+        if (queueDismissTimeout) {
+          clearTimeout(queueDismissTimeout);
+          queueDismissTimeout = null;
+        }
+        queueSection.classList.remove("is-collapsing");
+        queueSection.style.display = "flex";
+      }
+
+      store.startPendingQueue(count, format);
+      ui.renderList(queueList, store.getFilteredItems(), store.getPendingQueueCount(), format);
+      ui.updateStats(store.getStats());
+      updateQueueSectionVisibility();
+
+      // 2. Instantly clear tray and chips
       clearTray();
 
-      // 2. Immediate user feedback toast
+      // 3. Immediate user feedback toast
       const entityLabel = format === "mp4"
         ? (count === 1 ? "video" : "videos")
         : (count === 1 ? "canción" : "canciones");
@@ -730,9 +746,17 @@ document.addEventListener("DOMContentLoaded", () => {
         "success"
       );
 
-      // 3. Send background download request
-      api.addDownloads(urls, quality, format).catch((err) => {
+      // 4. Send background download request passing pre-resolved preview metadata
+      api.addDownloads(urls, quality, format, previewItems).then(() => {
+        setTimeout(() => {
+          if (store.getPendingQueueCount() > 0) {
+            store.clearPendingQueue();
+          }
+        }, 1200);
+      }).catch((err) => {
         ui.showToast(err.message, "error");
+        store.clearPendingQueue();
+        updateQueueSectionVisibility();
       });
     });
   }
@@ -790,6 +814,21 @@ document.addEventListener("DOMContentLoaded", () => {
           const format = currentFormat;
           btnDownloadSingle.setAttribute("disabled", "true");
 
+          // Immediately show queue section with shimmer skeleton for this item
+          if (queueSection) {
+            if (queueDismissTimeout) {
+              clearTimeout(queueDismissTimeout);
+              queueDismissTimeout = null;
+            }
+            queueSection.classList.remove("is-collapsing");
+            queueSection.style.display = "flex";
+          }
+
+          store.startPendingQueue(1, format);
+          ui.renderList(queueList, store.getFilteredItems(), store.getPendingQueueCount(), format);
+          ui.updateStats(store.getStats());
+          updateQueueSectionVisibility();
+
           const willBeEmpty = items.length <= 1;
           if (willBeEmpty) {
             const card = document.getElementById(`preview-card-${id}`);
@@ -819,11 +858,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }, 250);
           }
 
-          api.addDownloads([target.url], quality, format).then(() => {
+          api.addDownloads([target.url], quality, format, [target]).then(() => {
             ui.showToast(`Descargando (${format.toUpperCase()}): ${target.title}`, "success");
+            setTimeout(() => {
+              if (store.getPendingQueueCount() > 0) {
+                store.clearPendingQueue();
+              }
+            }, 1200);
           }).catch((err) => {
             ui.showToast(err.message, "error");
             btnDownloadSingle.removeAttribute("disabled");
+            store.clearPendingQueue();
+            updateQueueSectionVisibility();
           });
         }
       }
@@ -883,7 +929,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await api.clearCompleted();
         // Remove completed and expired from store
-        const items = store.getFilteredItems();
+        const items = Array.from(store.items.values());
         for (const i of items) {
           if (i.status === "completed" || i.status === "expired") {
             store.removeItem(i.id);
@@ -991,6 +1037,36 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshNotificationUI();
   }
 
+  // Progressive visibility controller for downloads queue section
+  let queueDismissTimeout = null;
+
+  const updateQueueSectionVisibility = () => {
+    if (!queueSection) return;
+    const stats = store.getStats();
+    const hasDownloads = stats.total > 0;
+
+    if (hasDownloads) {
+      if (queueDismissTimeout) {
+        clearTimeout(queueDismissTimeout);
+        queueDismissTimeout = null;
+      }
+      if (queueSection.style.display === "none" || queueSection.classList.contains("is-collapsing")) {
+        queueSection.classList.remove("is-collapsing");
+        queueSection.style.display = "flex";
+      }
+    } else {
+      if (queueSection.style.display !== "none" && !queueSection.classList.contains("is-collapsing")) {
+        queueSection.classList.add("is-collapsing");
+        if (queueDismissTimeout) clearTimeout(queueDismissTimeout);
+        queueDismissTimeout = setTimeout(() => {
+          queueDismissTimeout = null;
+          queueSection.style.display = "none";
+          queueSection.classList.remove("is-collapsing");
+        }, 280);
+      }
+    }
+  };
+
   // Reactive store subscription: re-renders list when necessary & triggers completion notifications
   let prevDownloadingCount = 0;
   let batchCompletedInSession = 0;
@@ -999,6 +1075,7 @@ document.addEventListener("DOMContentLoaded", () => {
   store.subscribe((event, payload) => {
     const stats = store.getStats();
     ui.updateStats(stats);
+    updateQueueSectionVisibility();
 
     // Track completed items in this active session
     if (event === "item_updated" && payload && payload.status === "completed") {
@@ -1058,13 +1135,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (card) {
         ui.updateCardDOM(payload);
       } else {
-        ui.renderList(queueList, store.getFilteredItems());
+        ui.renderList(queueList, store.getFilteredItems(), store.getPendingQueueCount(), currentFormat);
       }
       return;
     }
 
-    // For init, item_added, item_removed, filter_changed: full render
-    ui.renderList(queueList, store.getFilteredItems());
+    // For init, item_added, item_removed, filter_changed, pending_queue_changed: full render
+    ui.renderList(queueList, store.getFilteredItems(), store.getPendingQueueCount(), currentFormat);
   });
 
   // Cookies Modal & Management Logic

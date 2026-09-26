@@ -44,8 +44,17 @@ class DownloadItem(BaseModel):
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     completed_at: Optional[str] = None
 
+class DownloadItemMetadata(BaseModel):
+    url: str
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    duration: Optional[int] = None
+    duration_str: Optional[str] = None
+    thumbnail: Optional[str] = None
+
 class BatchDownloadRequest(BaseModel):
-    urls: list[str]
+    urls: list[str] = []
+    items: Optional[list[DownloadItemMetadata]] = None
     format: DownloadFormat = DownloadFormat.MP3
     quality: str = "192"
 

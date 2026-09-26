@@ -47,6 +47,7 @@
   display: flex;
   align-items: baseline;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .brand-badge {
@@ -58,6 +59,7 @@
   border-radius: var(--radius-sm);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .header-status {
@@ -110,6 +112,27 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  animation: queueSectionAppear 0.28s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transition: 
+    opacity 0.28s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.queue-section.is-collapsing {
+  opacity: 0 !important;
+  transform: translateY(-8px) scale(0.99) !important;
+  pointer-events: none !important;
+}
+
+@keyframes queueSectionAppear {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .queue-header {
@@ -228,25 +251,60 @@
   /* Header */
   .app-header {
     padding-bottom: 14px;
+    gap: 8px;
   }
 
-  .header-actions {
-    gap: 6px;
-  }
-
-  .btn-cookie-status,
-  .btn-notif-status {
-    padding: 5px 9px;
-    font-size: 0.78rem;
+  .brand-wrapper {
+    gap: 8px;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .brand-title {
-    font-size: 1.15rem;
+    font-size: 1.08rem;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .brand-badge {
+    white-space: nowrap;
+    font-size: 0.65rem;
+    padding: 1px 5px;
   }
 
   .brand-logo-icon {
     width: 32px;
     height: 32px;
+    min-width: 32px;
+    flex-shrink: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* Ocultar botón de notificaciones en vista móvil */
+  .btn-notif-status,
+  #btn-toggle-notifications {
+    display: none !important;
+  }
+
+  .cookie-text,
+  .btn-cookie-label,
+  #cookie-btn-label {
+    display: none !important;
+  }
+
+  .btn-cookie-status {
+    padding: 6px 10px;
+    gap: 5px;
+    min-height: 32px;
+    flex-shrink: 0;
   }
 
   /* Hero Section */
@@ -599,6 +657,27 @@
     --container-gap: 16px;
     padding: 12px 8px 48px;
     gap: var(--container-gap);
+  }
+
+  .brand-title {
+    font-size: 0.96rem;
+    gap: 4px;
+  }
+
+  .brand-badge {
+    font-size: 0.62rem;
+    padding: 1px 4px;
+  }
+
+  .brand-logo-icon {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+  }
+
+  .btn-cookie-status {
+    padding: 5px 8px;
+    min-height: 30px;
   }
 
   .hero-title {

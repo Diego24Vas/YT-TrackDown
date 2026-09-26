@@ -7,6 +7,7 @@ class Store {
     this.previewItems = new Map();
     this.activeFilter = "all"; // 'all' | 'downloading' | 'completed' | 'error'
     this.subscribers = new Set();
+    this.pendingQueueCount = 0;
   }
 
   setPreviewItems(newItems) {
@@ -61,8 +62,38 @@ class Store {
     this.notify("init", items);
   }
 
+  startPendingQueue(count, format = "mp3") {
+    this.pendingQueueCount = (this.pendingQueueCount || 0) + count;
+    this.pendingQueueFormat = format;
+    this.notify("pending_queue_changed", this.pendingQueueCount);
+  }
+
+  decrementPendingQueue() {
+    if (this.pendingQueueCount > 0) {
+      this.pendingQueueCount = Math.max(0, this.pendingQueueCount - 1);
+      this.notify("pending_queue_changed", this.pendingQueueCount);
+    }
+  }
+
+  clearPendingQueue() {
+    if (this.pendingQueueCount > 0) {
+      this.pendingQueueCount = 0;
+      this.notify("pending_queue_changed", 0);
+    }
+  }
+
+  getPendingQueueCount() {
+    if (this.activeFilter === "completed" || this.activeFilter === "error") {
+      return 0;
+    }
+    return this.pendingQueueCount || 0;
+  }
+
   addItem(item) {
     this.items.set(item.id, item);
+    if (this.pendingQueueCount > 0) {
+      this.pendingQueueCount = Math.max(0, this.pendingQueueCount - 1);
+    }
     this.notify("item_added", item);
   }
 
@@ -111,11 +142,12 @@ class Store {
     const all = Array.from(this.items.values());
     const completedItems = all.filter((i) => i.status === "completed");
     const totalBytes = completedItems.reduce((acc, item) => acc + (item.file_size || 0), 0);
+    const pending = this.getPendingQueueCount();
     return {
-      total: all.length,
+      total: all.length + pending,
       downloading: all.filter((i) =>
         ["queued", "fetching_info", "downloading", "converting"].includes(i.status)
-      ).length,
+      ).length + pending,
       completed: completedItems.length,
       error: all.filter((i) => i.status === "error").length,
       expired: all.filter((i) => i.status === "expired").length,

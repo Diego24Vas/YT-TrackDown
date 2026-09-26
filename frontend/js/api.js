@@ -17,11 +17,22 @@ export const api = {
     return res.json();
   },
 
-  async addDownloads(urls, quality = "192", format = "mp3") {
+  async addDownloads(urls, quality = "192", format = "mp3", items = null) {
+    const payload = { urls, quality, format };
+    if (items && Array.isArray(items) && items.length > 0) {
+      payload.items = items.map((i) => ({
+        url: i.url,
+        title: i.title || null,
+        artist: i.artist || null,
+        duration: i.duration || null,
+        duration_str: i.duration_str || null,
+        thumbnail: i.thumbnail || null,
+      }));
+    }
     const res = await fetch("/api/downloads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urls, quality, format }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Error al enviar los enlaces" }));

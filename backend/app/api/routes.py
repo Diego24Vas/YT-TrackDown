@@ -74,14 +74,12 @@ async def preview_urls(request: PreviewRequest):
 
 @router.post("/downloads", response_model=BatchDownloadResponse)
 async def create_downloads(request: BatchDownloadRequest):
-    """Enqueues a list of media URLs for MP3 or MP4 download."""
-    if not request.urls:
+    """Enqueues a list of media URLs or pre-resolved preview items for MP3 or MP4 download."""
+    cleaned_urls = [u.strip() for u in (request.urls or []) if u.strip()]
+    metadata_items = request.items or []
+
+    if not cleaned_urls and not metadata_items:
         raise HTTPException(status_code=400, detail="Debe proporcionar al menos una URL válida.")
-    
-    # Filter out empty or whitespace lines
-    cleaned_urls = [u.strip() for u in request.urls if u.strip()]
-    if not cleaned_urls:
-        raise HTTPException(status_code=400, detail="No se encontraron URLs válidas en la petición.")
 
     # Resolve format with quality-based inference fallback (prevents old cached clients from mismatching)
     target_format = request.format
@@ -94,6 +92,7 @@ async def create_downloads(request: BatchDownloadRequest):
         cleaned_urls,
         quality=request.quality,
         format=target_format,
+        metadata_items=metadata_items,
     )
     return BatchDownloadResponse(items=items, count=len(items))
 
