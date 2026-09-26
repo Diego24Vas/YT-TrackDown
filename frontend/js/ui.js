@@ -21,6 +21,8 @@ export const icons = {
   link: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
   close: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
   globe: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
+  bell: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
+  cookie: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"></path><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="10" cy="16.5" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="7" cy="13.5" r="1.1" fill="currentColor" stroke="none"></circle></svg>`,
 };
 
 export const ui = {
@@ -403,7 +405,7 @@ export const ui = {
           <span>Descargar ZIP</span>
           <span class="zip-size-chip">${totalSize}</span>
         `;
-        zipBtn.title = `Descargar ${stats.completed} ${stats.completed === 1 ? 'pista' : 'pistas'} en archivo .ZIP (${totalSize})`;
+        zipBtn.title = `Descargar ${stats.completed} ${stats.completed === 1 ? 'archivo' : 'archivos'} en archivo .ZIP (${totalSize})`;
       }
     }
 
@@ -566,6 +568,39 @@ export const ui = {
     }
     if (deleteWrap) {
       deleteWrap.style.display = status && status.has_cookies ? "flex" : "none";
+    }
+  },
+
+  /**
+   * Updates notification button state in header
+   */
+  updateNotificationUI(state) {
+    const dot = document.getElementById("notif-status-dot");
+    const label = document.getElementById("notif-btn-label");
+    const btn = document.getElementById("btn-toggle-notifications");
+    if (!dot || !label || !btn) return;
+
+    dot.classList.remove("is-active", "is-denied");
+
+    if (state === "granted") {
+      dot.classList.add("is-active");
+      label.textContent = "Notificaciones activas";
+      btn.title = "Notificaciones de escritorio activadas. Haz clic para pausarlas.";
+    } else if (state === "paused") {
+      label.textContent = "Notificaciones en pausa";
+      btn.title = "Notificaciones de escritorio pausadas. Haz clic para reanudarlas.";
+    } else if (state === "denied") {
+      dot.classList.add("is-denied");
+      label.textContent = "Notif. bloqueadas";
+      btn.title = "Las notificaciones están bloqueadas en tu navegador. Haz clic para ver cómo habilitarlas.";
+    } else if (state === "unsupported") {
+      label.textContent = "Notificaciones";
+      btn.title = "Tu navegador no soporta notificaciones de escritorio.";
+      btn.disabled = true;
+    } else {
+      // default / not requested yet
+      label.textContent = "Notificaciones";
+      btn.title = "Activar notificaciones de escritorio cuando finalicen descargas.";
     }
   }
 };

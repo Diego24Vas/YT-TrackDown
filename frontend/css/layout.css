@@ -228,6 +228,16 @@
     padding-bottom: 14px;
   }
 
+  .header-actions {
+    gap: 6px;
+  }
+
+  .btn-cookie-status,
+  .btn-notif-status {
+    padding: 5px 9px;
+    font-size: 0.78rem;
+  }
+
   .brand-title {
     font-size: 1.15rem;
   }

@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=1.5.5";
-import { store } from "./store.js?v=1.5.5";
-import { ui, icons } from "./ui.js?v=1.5.5";
+import { api } from "./api.js?v=1.5.6";
+import { store } from "./store.js?v=1.5.6";
+import { ui, icons } from "./ui.js?v=1.5.6";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterTabs = document.querySelectorAll(".filter-tab");
   const btnDownloadZip = document.getElementById("btn-download-zip");
   const btnClearCompleted = document.getElementById("btn-clear-completed");
+  const btnToggleNotifications = document.getElementById("btn-toggle-notifications");
 
   // Preview elements
   const previewSection = document.getElementById("preview-section");
@@ -44,6 +45,26 @@ document.addEventListener("DOMContentLoaded", () => {
     { value: "360", label: "360p", badge: "Ligero", badgeClass: "badge-light", desc: "Descarga rápida, menor peso" },
     { value: "best", label: "Máxima", badge: "Original", badgeClass: "badge-max", desc: "Mejor resolución disponible en YouTube" },
   ];
+
+  // Updates preview section title and icon based on format and staged count
+  const updatePreviewHeader = () => {
+    const previewItems = store.getPreviewItems();
+    const count = previewItems.length;
+    const isVideo = currentFormat === "mp4";
+    const titleIcon = document.getElementById("preview-title-icon");
+    const titleText = document.getElementById("preview-title-text");
+
+    if (titleIcon) {
+      titleIcon.innerHTML = isVideo ? icons.video : icons.music;
+    }
+    if (titleText) {
+      if (isVideo) {
+        titleText.textContent = count === 1 ? "Video preparado" : "Videos preparados";
+      } else {
+        titleText.textContent = count === 1 ? "Pista preparada" : "Pistas preparadas";
+      }
+    }
+  };
 
   // Custom styled quality dropdown & format switcher logic
   const setupCustomQualitySelect = () => {
@@ -184,6 +205,9 @@ document.addEventListener("DOMContentLoaded", () => {
         previewBtnFormat.textContent = format.toUpperCase();
       }
 
+      // Update preview section title and icon
+      updatePreviewHeader();
+
       // Update quality options for this format
       renderMenuOptions(format);
 
@@ -241,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (linkCounterChip) {
       if (count > 0) {
         if (hasPlaylist) {
-          linkCounterChip.innerHTML = `<span style="color:var(--accent-amber); font-weight:600;">🎵 Playlist</span> &bull; ${count} ${count === 1 ? "enlace" : "enlaces"}`;
+          linkCounterChip.innerHTML = `<span style="color:var(--accent-amber); font-weight:600; display:inline-flex; align-items:center; gap:4px;">${icons.playlist} Playlist</span> &bull; ${count} ${count === 1 ? "enlace" : "enlaces"}`;
         } else {
           linkCounterChip.textContent = `${count} ${count === 1 ? "enlace" : "enlaces"}`;
         }
@@ -288,8 +312,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await api.getPreview(urls);
       if (res.items && res.items.length > 0) {
         store.setPreviewItems(res.items);
+        const entityLabel = currentFormat === "mp4"
+          ? (res.count === 1 ? "video" : "videos")
+          : (res.count === 1 ? "pista" : "pistas");
         ui.showToast(
-          `Se ${res.count === 1 ? "preparó 1 pista" : "prepararon " + res.count + " pistas"} en la lista inferior.`,
+          `Se ${res.count === 1 ? "preparó 1 " + entityLabel : "prepararon " + res.count + " " + entityLabel} en la lista inferior.`,
           "success"
         );
       }
@@ -708,10 +735,135 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Reactive store subscription: re-renders list when necessary
+  // Desktop Notifications Manager (Windows & Linux native browser notifications)
+  const getNotificationState = () => {
+    if (!("Notification" in window)) return "unsupported";
+    if (Notification.permission === "denied") return "denied";
+    if (Notification.permission === "granted") {
+      const isEnabled = localStorage.getItem("yt_notifications_enabled") !== "false";
+      return isEnabled ? "granted" : "paused";
+    }
+    return "default";
+  };
+
+  const refreshNotificationUI = () => {
+    ui.updateNotificationUI(getNotificationState());
+  };
+
+  const sendDesktopNotification = (title, options = {}) => {
+    if (!("Notification" in window)) return null;
+    if (Notification.permission !== "granted") return null;
+    const isEnabled = localStorage.getItem("yt_notifications_enabled") !== "false";
+    if (!isEnabled) return null;
+
+    try {
+      const n = new Notification(title, {
+        icon: "/favicon.png",
+        badge: "/favicon.png",
+        silent: false,
+        ...options,
+      });
+
+      n.onclick = () => {
+        window.focus();
+        if (typeof options.onClick === "function") options.onClick();
+        n.close();
+      };
+      return n;
+    } catch (err) {
+      console.warn("Could not display desktop notification:", err);
+      return null;
+    }
+  };
+
+  if (btnToggleNotifications) {
+    btnToggleNotifications.addEventListener("click", async () => {
+      if (!("Notification" in window)) {
+        ui.showToast("Tu navegador no soporta notificaciones de escritorio.", "info");
+        return;
+      }
+
+      if (Notification.permission === "denied") {
+        ui.showToast("Las notificaciones están bloqueadas en tu navegador. Puedes habilitarlas en el candado o configuración junto a la URL.", "error");
+        return;
+      }
+
+      if (Notification.permission === "default") {
+        try {
+          const perm = await Notification.requestPermission();
+          if (perm === "granted") {
+            localStorage.setItem("yt_notifications_enabled", "true");
+            refreshNotificationUI();
+            ui.showToast("¡Notificaciones de escritorio activadas con éxito!", "success");
+            sendDesktopNotification("YT-TrackDown", {
+              body: "¡Notificaciones activadas! Te avisaremos cuando tus descargas finalicen en segundo plano.",
+              tag: "ytdown-notif-welcome",
+            });
+          } else {
+            refreshNotificationUI();
+            ui.showToast("Permiso de notificaciones no concedido.", "info");
+          }
+        } catch (err) {
+          console.warn("Error requesting notification permission:", err);
+        }
+        return;
+      }
+
+      if (Notification.permission === "granted") {
+        const isCurrentlyEnabled = localStorage.getItem("yt_notifications_enabled") !== "false";
+        const nextState = !isCurrentlyEnabled;
+        localStorage.setItem("yt_notifications_enabled", nextState ? "true" : "false");
+        refreshNotificationUI();
+        ui.showToast(
+          nextState ? "Notificaciones de escritorio activadas." : "Notificaciones de escritorio pausadas.",
+          "info"
+        );
+      }
+    });
+
+    if ("permissions" in navigator && navigator.permissions.query) {
+      navigator.permissions.query({ name: "notifications" }).then((status) => {
+        status.onchange = () => refreshNotificationUI();
+      }).catch(() => {});
+    }
+
+    refreshNotificationUI();
+  }
+
+  // Reactive store subscription: re-renders list when necessary & triggers completion notifications
+  let prevDownloadingCount = 0;
+  let batchCompletedInSession = 0;
+  let lastCompletedTitle = "";
+
   store.subscribe((event, payload) => {
     const stats = store.getStats();
     ui.updateStats(stats);
+
+    // Track completed items in this active session
+    if (event === "item_updated" && payload && payload.status === "completed") {
+      batchCompletedInSession++;
+      lastCompletedTitle = payload.title || (payload.format === "mp4" ? "Video descargado" : "Pista de audio descargada");
+    }
+
+    // Detect when all active downloading tasks have finished
+    if (prevDownloadingCount > 0 && stats.downloading === 0) {
+      if (batchCompletedInSession > 0) {
+        if (batchCompletedInSession === 1) {
+          sendDesktopNotification("¡Descarga completada!", {
+            body: lastCompletedTitle ? `"${lastCompletedTitle}" está lista para guardar.` : "Tu descarga ha finalizado con éxito.",
+            tag: "ytdown-complete",
+          });
+        } else {
+          sendDesktopNotification("¡Descargas completadas!", {
+            body: `Se completaron ${batchCompletedInSession} descargas con éxito en segundo plano.`,
+            tag: "ytdown-batch-complete",
+          });
+        }
+        batchCompletedInSession = 0;
+        lastCompletedTitle = "";
+      }
+    }
+    prevDownloadingCount = stats.downloading;
 
     if (event === "preview_updated") {
       const previewItems = store.getPreviewItems();
@@ -724,6 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (previewBtnFormat) {
           previewBtnFormat.textContent = currentFormat.toUpperCase();
         }
+        updatePreviewHeader();
         ui.renderPreviewList(previewList, previewItems, currentFormat);
       } else {
         if (!previewSection.classList.contains("fade-out")) {
