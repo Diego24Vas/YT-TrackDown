@@ -9,6 +9,7 @@ from backend.app.domain.models import (
     DownloadItem,
     SystemStats,
     DownloadStatus,
+    DownloadFormat,
     PreviewRequest,
     PreviewResponse,
     PreviewItem,
@@ -73,7 +74,7 @@ async def preview_urls(request: PreviewRequest):
 
 @router.post("/downloads", response_model=BatchDownloadResponse)
 async def create_downloads(request: BatchDownloadRequest):
-    """Enqueues a list of media URLs for MP3 download."""
+    """Enqueues a list of media URLs for MP3 or MP4 download."""
     if not request.urls:
         raise HTTPException(status_code=400, detail="Debe proporcionar al menos una URL válida.")
     
@@ -82,7 +83,18 @@ async def create_downloads(request: BatchDownloadRequest):
     if not cleaned_urls:
         raise HTTPException(status_code=400, detail="No se encontraron URLs válidas en la petición.")
 
-    items = await queue_service.add_items(cleaned_urls, quality=request.quality)
+    # Resolve format with quality-based inference fallback (prevents old cached clients from mismatching)
+    target_format = request.format
+    if target_format == DownloadFormat.MP3 and request.quality in settings.ALLOWED_VIDEO_QUALITIES:
+        target_format = DownloadFormat.MP4
+    elif target_format == DownloadFormat.MP4 and request.quality in settings.ALLOWED_AUDIO_QUALITIES:
+        target_format = DownloadFormat.MP3
+
+    items = await queue_service.add_items(
+        cleaned_urls,
+        quality=request.quality,
+        format=target_format,
+    )
     return BatchDownloadResponse(items=items, count=len(items))
 
 @router.get("/downloads", response_model=list[DownloadItem])
@@ -99,8 +111,8 @@ async def get_download(item_id: str):
     return item
 
 @router.get("/downloads/{item_id}/file")
-async def download_mp3_file(item_id: str):
-    """Streams the converted MP3 file to browser for direct download."""
+async def download_file(item_id: str):
+    """Streams the converted MP3 or MP4 file to browser for direct download."""
     item = queue_service.get_item(item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Descarga no encontrada.")
@@ -116,27 +128,38 @@ async def download_mp3_file(item_id: str):
     if not file_path.is_file():
         raise HTTPException(status_code=404, detail="El archivo no se encuentra en el servidor.")
 
+    # Determine extension and media type based on format / disk extension
+    is_video = (item.format == DownloadFormat.MP4) or file_path.suffix.lower() == ".mp4"
+    if is_video:
+        ext = ".mp4"
+        media_type = "video/mp4"
+        default_name = "video.mp4"
+    else:
+        ext = ".mp3"
+        media_type = "audio/mpeg"
+        default_name = "audio.mp3"
+
     # Friendly downloaded filename without internal id prefix or video tags
     if item.title:
         clean_name = storage_adapter.clean_display_filename(item.title)
         base_name = storage_adapter.sanitize_filename(clean_name)
-        display_name = f"{base_name}.mp3" if not base_name.lower().endswith(".mp3") else base_name
+        display_name = f"{base_name}{ext}" if not base_name.lower().endswith(ext) else base_name
     elif item.filename:
         clean_name = storage_adapter.clean_display_filename(item.filename)
         display_name = storage_adapter.sanitize_filename(clean_name)
     else:
-        display_name = "audio.mp3"
+        display_name = default_name
 
     # RFC 6266 / RFC 5987 standard headers: ASCII fallback + UTF-8 encoded
     ascii_name = display_name.encode("ascii", "ignore").decode("ascii").strip()
-    if not ascii_name or ascii_name == ".mp3":
-        ascii_name = "audio.mp3"
+    if not ascii_name or ascii_name == ext:
+        ascii_name = default_name
     encoded_name = urllib.parse.quote(display_name)
     content_disposition = f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{encoded_name}'
 
     return FileResponse(
         path=file_path,
-        media_type="audio/mpeg",
+        media_type=media_type,
         headers={"Content-Disposition": content_disposition},
     )
 
@@ -164,7 +187,7 @@ async def clear_completed():
 
 @router.get("/downloads/export/zip")
 async def export_all_zip(background_tasks: BackgroundTasks):
-    """Packages all completed MP3 files into a zip file."""
+    """Packages all completed media files (MP3/MP4) into a zip file."""
     completed_items = [
         item for item in queue_service.get_all_items()
         if item.status == DownloadStatus.COMPLETED and item.filename and storage_adapter.file_exists(item.filename)
@@ -173,7 +196,7 @@ async def export_all_zip(background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="No hay archivos completados para empaquetar.")
 
     filenames = [i.filename for i in completed_items]
-    zip_path = storage_adapter.create_zip(filenames, zip_name="musica_descargada.zip")
+    zip_path = storage_adapter.create_zip(filenames, zip_name="archivos_descargados.zip")
 
     # Schedule zip removal after sending
     background_tasks.add_task(storage_adapter.delete_file, zip_path.name)
@@ -181,7 +204,7 @@ async def export_all_zip(background_tasks: BackgroundTasks):
     return FileResponse(
         path=zip_path,
         media_type="application/zip",
-        filename="YT-TrackDown_audios.zip",
+        filename="YT-TrackDown_descargas.zip",
     )
 
 @router.get("/stats", response_model=SystemStats)

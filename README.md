@@ -1,6 +1,6 @@
-# 🎵 YT-TrackDown
+# 🎵🎬 YT-TrackDown
 
-**YT-TrackDown** es una aplicación web rápida, moderna y ligera para extraer y descargar audio de videos de YouTube en formato **MP3** de alta fidelidad.
+**YT-TrackDown** es una aplicación web rápida, moderna y ligera para descargar **audio (MP3)** de alta fidelidad y **video (MP4)** en diversas resoluciones directamente desde enlaces de YouTube.
 
 Permite procesar enlaces individuales o listas completas por lotes en segundo plano, con actualización de progreso en tiempo real y sin necesidad de instalar clientes pesados en tu equipo.
 
@@ -9,7 +9,8 @@ Permite procesar enlaces individuales o listas completas por lotes en segundo pl
 ## ✨ Características Principales
 
 - 📥 **Descargas individuales y por lotes (Batch)**: Pega uno o varios enlaces de YouTube (uno por línea o separados por espacios) para procesarlos juntos.
-- 🎧 **Calidad de audio configurable**: Elige la tasa de bits deseada antes de descargar (**128 kbps**, **192 kbps**, **256 kbps** o **320 kbps**).
+- 🎵 **Modo Audio (MP3)**: Elige la tasa de bits deseada (**128 kbps**, **192 kbps**, **256 kbps** o **320 kbps**).
+- 🎬 **Modo Video (MP4)**: Descarga videos combinados con audio en resoluciones de alta definición (**1080p Full HD**, **720p HD**, **480p**, **360p** o **Máxima calidad original**).
 - ⚡ **Progreso en tiempo real**: Monitorea el estado, porcentaje y velocidad de cada descarga mediante *Server-Sent Events (SSE)*.
 - 🔄 **Cola asíncrona no bloqueante**: Trabaja con un pool de descargas concurrentes en segundo plano; la interfaz nunca se congela.
 - 🧹 **Limpieza automática de almacenamiento**: Los archivos generados se eliminan automáticamente tras un período configurable (por defecto 15 minutos) para evitar saturar el disco.
@@ -76,7 +77,9 @@ Puedes personalizar la configuración mediante variables en el entorno o en `doc
 |---|---|---|
 | `PORT` | Puerto de escucha del servidor web | `8080` |
 | `MAX_CONCURRENT_DOWNLOADS` | Límite de descargas simultáneas en paralelo | `2` |
+| `DEFAULT_FORMAT` | Formato por defecto (`mp3` o `mp4`) | `mp3` |
 | `DEFAULT_AUDIO_QUALITY` | Calidad por defecto del audio en kbps (`128`, `192`, `256`, `320`) | `192` |
+| `DEFAULT_VIDEO_QUALITY` | Resolución por defecto del video (`360`, `480`, `720`, `1080`, `best`) | `1080` |
 | `FILE_RETENTION_MINUTES` | Minutos antes de eliminar automáticamente los archivos descargados | `15` |
 
 ---

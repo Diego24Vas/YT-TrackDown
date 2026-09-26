@@ -1,12 +1,11 @@
-import { api } from "./api.js";
-import { store } from "./store.js";
-import { ui, icons } from "./ui.js";
+import { api } from "./api.js?v=1.5.4";
+import { store } from "./store.js?v=1.5.4";
+import { ui, icons } from "./ui.js?v=1.5.4";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
   const composerTextarea = document.getElementById("composer-textarea");
   const linkCounterChip = document.getElementById("link-counter-chip");
-  const btnSubmit = document.getElementById("btn-submit-downloads");
   const btnPaste = document.getElementById("btn-paste-clipboard");
   const btnClearComposer = document.getElementById("btn-clear-composer");
   const selectQuality = document.getElementById("select-quality");
@@ -24,37 +23,111 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnClearPreview = document.getElementById("btn-clear-preview");
   const btnDownloadAllPreview = document.getElementById("btn-download-all-preview");
 
-  // Custom styled quality dropdown logic
+  // Format and Quality Definitions (separate for audio and video)
+  let currentFormat = "mp3";
+
+  const audioQualities = [
+    { value: "320", label: "320 kbps", badge: "Máxima", badgeClass: "badge-max", desc: "Mayor fidelidad de audio" },
+    { value: "256", label: "256 kbps", badge: "Alta", badgeClass: "badge-high", desc: "Excelente claridad y balance" },
+    { value: "192", label: "192 kbps", badge: "Estándar", badgeClass: "badge-std", desc: "Rápido, recomendado para todo uso", isDefault: true },
+    { value: "128", label: "128 kbps", badge: "Ligera", badgeClass: "badge-light", desc: "Descarga rápida, archivo liviano" },
+  ];
+
+  const videoQualities = [
+    { value: "1080", label: "1080p", badge: "Full HD", badgeClass: "badge-max", desc: "Gran definición y detalle", isDefault: true },
+    { value: "720", label: "720p", badge: "HD", badgeClass: "badge-high", desc: "Balance ideal calidad y peso" },
+    { value: "480", label: "480p", badge: "SD", badgeClass: "badge-std", desc: "Definición estándar liviana" },
+    { value: "360", label: "360p", badge: "Ligero", badgeClass: "badge-light", desc: "Descarga rápida, menor peso" },
+    { value: "best", label: "Máxima", badge: "Original", badgeClass: "badge-max", desc: "Mejor resolución disponible en YouTube" },
+  ];
+
+  // Custom styled quality dropdown & format switcher logic
   const setupCustomQualitySelect = () => {
     const wrap = document.getElementById("quality-dropdown-wrap");
     const trigger = document.getElementById("quality-trigger-btn");
     const menu = document.getElementById("quality-options-menu");
     const currentLabel = document.getElementById("quality-current-label");
     const currentBadge = document.getElementById("quality-current-badge");
-    const options = menu ? menu.querySelectorAll(".custom-select-option") : [];
+    const mainTabMp3 = document.getElementById("main-tab-mp3");
+    const mainTabMp4 = document.getElementById("main-tab-mp4");
+    const previewBtnFormat = document.getElementById("preview-btn-format");
 
     if (!wrap || !trigger || !menu || !selectQuality) return;
 
-    const badgeMap = {
-      "320": { label: "320 kbps", badge: "Máxima", class: "badge-max" },
-      "256": { label: "256 kbps", badge: "Alta", class: "badge-high" },
-      "192": { label: "192 kbps", badge: "Estándar", class: "badge-std" },
-      "128": { label: "128 kbps", badge: "Ligera", class: "badge-light" },
-    };
-
     const updateTriggerUI = (val) => {
-      const info = badgeMap[val] || { label: `${val} kbps`, badge: "", class: "" };
+      const isVideo = currentFormat === "mp4";
+      const list = isVideo ? videoQualities : audioQualities;
+      const info = list.find((q) => q.value === val) || { label: val, badge: "", badgeClass: "" };
+
       if (currentLabel) currentLabel.textContent = info.label;
       if (currentBadge) {
         currentBadge.textContent = info.badge;
-        currentBadge.className = `custom-select-badge ${info.class}`;
+        currentBadge.className = `custom-select-badge ${info.badgeClass || ""}`;
       }
 
+      const options = menu.querySelectorAll(".custom-select-option");
       options.forEach((opt) => {
         const isMatch = opt.dataset.value === val;
         opt.classList.toggle("is-selected", isMatch);
         opt.setAttribute("aria-selected", isMatch ? "true" : "false");
       });
+    };
+
+    const attachOptionEvents = () => {
+      const options = menu.querySelectorAll(".custom-select-option");
+      options.forEach((opt) => {
+        opt.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const val = opt.dataset.value;
+          if (val) {
+            selectQuality.value = val;
+            selectQuality.dispatchEvent(new Event("change"));
+            updateTriggerUI(val);
+            closeMenu();
+          }
+        });
+      });
+    };
+
+    const renderMenuOptions = (format) => {
+      const isVideo = format === "mp4";
+      const list = isVideo ? videoQualities : audioQualities;
+      const defaultOption = list.find((q) => q.isDefault) || list[0];
+      const headerText = isVideo ? "Resolución de video" : "Tasa de bits (Bitrate)";
+
+      // Rebuild hidden select options
+      selectQuality.innerHTML = list
+        .map((q) => `<option value="${q.value}" ${q.value === defaultOption.value ? "selected" : ""}>${q.label}</option>`)
+        .join("");
+      selectQuality.value = defaultOption.value;
+
+      // Rebuild custom menu items
+      menu.innerHTML = `
+        <div class="custom-select-header">
+          <span>${headerText}</span>
+        </div>
+        ${list
+          .map(
+            (q) => `
+          <div class="custom-select-option ${q.value === defaultOption.value ? "is-selected" : ""}" data-value="${q.value}" role="option" aria-selected="${q.value === defaultOption.value ? "true" : "false"}">
+            <div class="option-content">
+              <div class="option-title-row">
+                <span class="option-title">${q.label}</span>
+                <span class="option-badge ${q.badgeClass}">${q.badge}</span>
+              </div>
+              <div class="option-desc">${q.desc}</div>
+            </div>
+            <svg class="option-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+        `
+          )
+          .join("")}
+      `;
+
+      updateTriggerUI(defaultOption.value);
+      attachOptionEvents();
     };
 
     const openMenu = () => {
@@ -78,19 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    options.forEach((opt) => {
-      opt.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const val = opt.dataset.value;
-        if (val) {
-          selectQuality.value = val;
-          selectQuality.dispatchEvent(new Event("change"));
-          updateTriggerUI(val);
-          closeMenu();
-        }
-      });
-    });
-
     // Close on click outside
     document.addEventListener("click", (e) => {
       if (!wrap.contains(e.target)) {
@@ -106,8 +166,35 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Initial sync
-    updateTriggerUI(selectQuality.value || "192");
+    // Switch format handler - synchronizes all format UI elements
+    const switchFormat = (format) => {
+      if (currentFormat === format) return;
+      currentFormat = format;
+
+      // Synchronize top mode tabs
+      if (mainTabMp3) mainTabMp3.classList.toggle("is-active", format === "mp3");
+      if (mainTabMp4) mainTabMp4.classList.toggle("is-active", format === "mp4");
+
+      // Update preview download button label
+      if (previewBtnFormat) {
+        previewBtnFormat.textContent = format.toUpperCase();
+      }
+
+      // Update quality options for this format
+      renderMenuOptions(format);
+
+      // Re-render preview cards if any exist so badges and buttons reflect the new format
+      const previewItems = store.getPreviewItems();
+      if (previewItems.length > 0 && previewList) {
+        ui.renderPreviewList(previewList, previewItems, currentFormat);
+      }
+    };
+
+    if (mainTabMp3) mainTabMp3.addEventListener("click", () => switchFormat("mp3"));
+    if (mainTabMp4) mainTabMp4.addEventListener("click", () => switchFormat("mp4"));
+
+    // Initial render
+    renderMenuOptions("mp3");
   };
 
   setupCustomQualitySelect();
@@ -132,11 +219,9 @@ document.addEventListener("DOMContentLoaded", () => {
         linkCounterChip.textContent = `${count} ${count === 1 ? "enlace" : "enlaces"}`;
       }
       linkCounterChip.classList.add("has-links");
-      btnSubmit.removeAttribute("disabled");
     } else {
       linkCounterChip.textContent = "0 enlaces";
       linkCounterChip.classList.remove("has-links");
-      btnSubmit.setAttribute("disabled", "true");
     }
 
     // Synchronize preview in real time if requested
@@ -159,19 +244,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return urls;
   };
 
+  let inputDebounce = null;
   composerTextarea.addEventListener("input", () => {
-    if (!isPreviewLoading) {
-      updateDetectedUrls(true);
-    } else {
-      updateDetectedUrls(false);
-    }
+    updateDetectedUrls(true);
+
+    if (inputDebounce) clearTimeout(inputDebounce);
+    inputDebounce = setTimeout(() => {
+      const urls = updateDetectedUrls(false);
+      if (urls.length > 0 && !isPreviewLoading) {
+        const currentPreviewUrls = store.getPreviewItems().map((i) => i.url);
+        const hasNewUrls = urls.some((u) => !currentPreviewUrls.some((pu) => ui.urlsMatch(u, pu)));
+        if (hasNewUrls) {
+          handlePreview(urls);
+        }
+      }
+    }, 600);
   });
 
-  // Keyboard shortcut: Ctrl+Enter or Cmd+Enter to submit
+  // Keyboard shortcut: Ctrl+Enter or Cmd+Enter to preview immediately
   composerTextarea.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();
-      btnSubmit.click();
+      const urls = updateDetectedUrls(false);
+      if (urls.length > 0) handlePreview(urls);
     }
   });
 
@@ -182,9 +277,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!urls || urls.length === 0 || isPreviewLoading) return;
     isPreviewLoading = true;
 
-    const originalBtnHtml = btnSubmit.innerHTML;
-    btnSubmit.setAttribute("disabled", "true");
-    btnSubmit.innerHTML = `${icons.spinner} Inspeccionando enlaces...`;
+    if (linkCounterChip) {
+      linkCounterChip.innerHTML = `${icons.spinner} Inspeccionando enlaces...`;
+      linkCounterChip.classList.add("has-links");
+    }
 
     try {
       const res = await api.getPreview(urls);
@@ -200,7 +296,6 @@ document.addEventListener("DOMContentLoaded", () => {
       ui.showToast(err.message, "error");
     } finally {
       isPreviewLoading = false;
-      btnSubmit.innerHTML = originalBtnHtml;
       updateDetectedUrls(false);
     }
   };
@@ -266,14 +361,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Previsualizar y Añadir button click
-  btnSubmit.addEventListener("click", () => {
-    const urls = updateDetectedUrls();
-    if (urls.length > 0) {
-      handlePreview(urls);
-    }
-  });
-
   // Clear preview list
   if (btnClearPreview) {
     btnClearPreview.addEventListener("click", () => {
@@ -295,6 +382,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const urls = previewItems.map((i) => i.url);
       const quality = selectQuality.value;
       const count = previewItems.length;
+      const format = currentFormat;
+      const formatUpper = format.toUpperCase();
 
       // 1. Instantly clear textarea and URL chips
       composerTextarea.value = "";
@@ -306,13 +395,16 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       // 3. Immediate user feedback toast
+      const entityLabel = format === "mp4"
+        ? (count === 1 ? "video" : "videos")
+        : (count === 1 ? "canción" : "canciones");
       ui.showToast(
-        `Iniciando descarga de ${count} ${count === 1 ? "canción" : "canciones"} en formato MP3.`,
+        `Iniciando descarga de ${count} ${entityLabel} en formato ${formatUpper}.`,
         "success"
       );
 
       // 4. Send background download request
-      api.addDownloads(urls, quality).catch((err) => {
+      api.addDownloads(urls, quality, format).catch((err) => {
         ui.showToast(err.message, "error");
       });
     });
@@ -365,6 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const target = items.find((i) => i.id === id);
         if (target) {
           const quality = selectQuality.value;
+          const format = currentFormat;
           btnDownloadSingle.setAttribute("disabled", "true");
 
           const willBeEmpty = items.length <= 1;
@@ -397,8 +490,8 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           }
 
-          api.addDownloads([target.url], quality).then(() => {
-            ui.showToast(`Descargando: ${target.title}`, "success");
+          api.addDownloads([target.url], quality, format).then(() => {
+            ui.showToast(`Descargando (${format.toUpperCase()}): ${target.title}`, "success");
           }).catch((err) => {
             ui.showToast(err.message, "error");
             btnDownloadSingle.removeAttribute("disabled");
@@ -486,7 +579,11 @@ document.addEventListener("DOMContentLoaded", () => {
         previewSection.style.display = "flex";
         previewCounter.textContent = `${previewItems.length}`;
         previewBtnCount.textContent = `${previewItems.length}`;
-        ui.renderPreviewList(previewList, previewItems);
+        const previewBtnFormat = document.getElementById("preview-btn-format");
+        if (previewBtnFormat) {
+          previewBtnFormat.textContent = currentFormat.toUpperCase();
+        }
+        ui.renderPreviewList(previewList, previewItems, currentFormat);
       } else {
         if (!previewSection.classList.contains("fade-out")) {
           previewSection.style.display = "none";

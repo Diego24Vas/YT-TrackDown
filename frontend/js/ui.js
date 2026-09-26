@@ -14,6 +14,7 @@ export const icons = {
   refresh: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
   zip: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
   soundwave: `<svg class="pulsing" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>`,
+  video: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
   externalLink: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
 };
 
@@ -139,7 +140,7 @@ export const ui = {
   /**
    * Renders status pill badge
    */
-  renderStatusBadge(status, percentage = 0) {
+  renderStatusBadge(status, percentage = 0, format = "mp3") {
     switch (status) {
       case "queued":
         return `<span class="status-badge badge-queued">${icons.clock} En espera</span>`;
@@ -148,7 +149,9 @@ export const ui = {
       case "downloading":
         return `<span class="status-badge badge-downloading tabular">${icons.spinner} Descargando ${percentage.toFixed(0)}%</span>`;
       case "converting":
-        return `<span class="status-badge badge-converting">${icons.soundwave} Convirtiendo a MP3</span>`;
+        return format === "mp4"
+          ? `<span class="status-badge badge-converting">${icons.video} Uniendo video MP4</span>`
+          : `<span class="status-badge badge-converting">${icons.soundwave} Convirtiendo a MP3</span>`;
       case "completed":
         return `<span class="status-badge badge-completed">${icons.check} Completado</span>`;
       case "expired":
@@ -164,20 +167,29 @@ export const ui = {
    * Builds single card HTML string
    */
   createCardHtml(item) {
+    const isVideo = item.format === "mp4";
+    const formatLabel = isVideo ? "MP4" : "MP3";
+    const qualityText = isVideo
+      ? (item.quality === "best" ? "Máx" : `${item.quality}p`)
+      : `${item.quality}kbps`;
+
+    const formatBadge = isVideo
+      ? `<span class="format-tag format-tag-mp4">MP4 ${qualityText}</span>`
+      : `<span class="format-tag format-tag-mp3">MP3 ${qualityText}</span>`;
+
     const title = item.title || item.url;
     const artist = item.artist ? `${item.artist} • ` : "";
-    const qualityBadge = `<span style="font-size:0.75rem; color:var(--text-muted);">MP3 ${item.quality}kbps</span>`;
     const percentage = item.progress?.percentage || (item.status === "completed" ? 100 : 0);
     const speed = item.progress?.speed_str || "";
     const eta = item.progress?.eta_str ? `ETA: ${item.progress.eta_str}` : "";
     const sizeStr = item.file_size_str || "";
     const sizeBadge = item.file_size_str
-      ? `<span class="item-size-badge" title="Peso del archivo MP3">${item.file_size_str}</span>`
+      ? `<span class="item-size-badge" title="Peso del archivo ${formatLabel}">${item.file_size_str}</span>`
       : "";
 
     const thumbHtml = item.thumbnail
       ? `<img src="${item.thumbnail}" alt="" class="item-thumb-img" loading="lazy">`
-      : `<div class="item-thumb-placeholder">${icons.music}</div>`;
+      : `<div class="item-thumb-placeholder">${isVideo ? icons.video : icons.music}</div>`;
 
     const durationHtml = item.duration_str
       ? `<span class="item-duration-badge">${item.duration_str}</span>`
@@ -190,17 +202,19 @@ export const ui = {
 
     let actionBtnHtml = "";
     if (item.status === "completed") {
-      let rawTitle = (item.title || "audio")
+      const ext = isVideo ? ".mp4" : ".mp3";
+      const defaultBase = isVideo ? "video" : "audio";
+      let rawTitle = (item.title || defaultBase)
         .replace(/^[a-fA-F0-9]{10}_/, "")
         .replace(/\s*[\(\[]\s*(?:video\s+oficial|official\s+video|official\s+music\s+video|audio\s+oficial|official\s+audio|video\s+lyric|lyric\s+video|(?:official\s+|audio\s+)?visualizer(?:\s+video)?)\s*[\)\]]/gi, "")
         .replace(/\s*[-–—|]\s*(?:video\s+oficial|official\s+video|audio\s+oficial|official\s+audio|(?:official\s+|audio\s+)?visualizer(?:\s+video)?)\s*$/gi, "")
         .replace(/[\s\-–—|_]+$/, "")
         .replace(/[\\/*?:"<>|]/g, "")
         .trim();
-      const cleanDownloadName = rawTitle.toLowerCase().endsWith(".mp3") ? rawTitle : `${rawTitle || "audio"}.mp3`;
+      const cleanDownloadName = rawTitle.toLowerCase().endsWith(ext) ? rawTitle : `${rawTitle || defaultBase}${ext}`;
       actionBtnHtml = `
-        <a href="/api/downloads/${item.id}/file" download="${cleanDownloadName.replace(/"/g, '&quot;')}" class="btn btn-success" style="padding: 6px 12px; font-size: 0.82rem;" title="Guardar archivo MP3">
-          ${icons.download} Guardar MP3
+        <a href="/api/downloads/${item.id}/file" download="${cleanDownloadName.replace(/"/g, '&quot;')}" class="btn btn-success" style="padding: 6px 12px; font-size: 0.82rem;" title="Guardar archivo ${formatLabel}">
+          ${icons.download} Guardar ${formatLabel}
         </a>
       `;
     } else if (item.status === "expired") {
@@ -237,7 +251,7 @@ export const ui = {
             <div style="min-width:0; flex:1;">
               <div class="item-title" title="${title}">${title}</div>
               <div class="item-meta-row">
-                <span>${artist}${qualityBadge}</span>
+                <span>${artist}${formatBadge}</span>
                 ${sizeBadge}
                 <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted); display:inline-flex; align-items:center; gap:2px;" title="Abrir enlace original">
                   ${icons.externalLink}
@@ -245,7 +259,7 @@ export const ui = {
               </div>
             </div>
             <div id="status-badge-${item.id}" class="item-status-wrapper">
-              ${this.renderStatusBadge(item.status, percentage)}
+              ${this.renderStatusBadge(item.status, percentage, item.format)}
             </div>
           </div>
 
@@ -316,7 +330,7 @@ export const ui = {
     }
 
     if (badgeSlot) {
-      badgeSlot.innerHTML = this.renderStatusBadge(item.status, percentage);
+      badgeSlot.innerHTML = this.renderStatusBadge(item.status, percentage, item.format);
     }
   },
 
@@ -343,7 +357,7 @@ export const ui = {
         <div class="empty-queue">
           <div class="empty-icon">${icons.music}</div>
           <div class="empty-title">No hay descargas en la cola</div>
-          <div class="empty-desc">Pega uno o más enlaces de YouTube en el campo superior para comenzar a descargar tus pistas en formato MP3.</div>
+          <div class="empty-desc">Pega uno o más enlaces de YouTube en el campo superior para comenzar a descargar en formato MP3 o MP4.</div>
         </div>
       `;
       return;
@@ -386,7 +400,9 @@ export const ui = {
   /**
    * Builds single preview card HTML string
    */
-  createPreviewCardHtml(item) {
+  createPreviewCardHtml(item, currentFormat = "mp3") {
+    const isVideo = (item.format || currentFormat) === "mp4";
+    const formatLabel = isVideo ? "MP4" : "MP3";
     const title = item.title || item.url;
     const artist = item.artist ? `${item.artist} &bull; ` : "";
     const durationHtml = item.duration_str
@@ -394,7 +410,8 @@ export const ui = {
       : "";
     const thumbHtml = item.thumbnail
       ? `<img src="${item.thumbnail}" alt="" class="preview-thumb-img" loading="lazy">`
-      : `<div style="color:var(--text-muted);">${icons.music}</div>`;
+      : `<div style="color:var(--text-muted);">${isVideo ? icons.video : icons.music}</div>`;
+    const formatBadge = `<span class="format-tag ${isVideo ? 'format-tag-mp4' : 'format-tag-mp3'}">${formatLabel}</span>`;
 
     return `
       <div class="preview-card" id="preview-card-${item.id}" data-id="${item.id}">
@@ -404,11 +421,11 @@ export const ui = {
         </div>
         <div class="preview-info">
           <div class="preview-track-title" title="${title}">${title}</div>
-          <div class="preview-track-meta">${artist}<a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted); text-decoration:none;">${item.url}</a></div>
+          <div class="preview-track-meta">${artist}${formatBadge} <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted); text-decoration:none;">${item.url}</a></div>
         </div>
         <div class="preview-actions">
-          <button type="button" class="btn btn-secondary btn-download-single-preview" data-id="${item.id}" style="padding: 5px 10px; font-size: 0.8rem;" title="Descargar solo esta pista">
-            ${icons.download} Descargar
+          <button type="button" class="btn btn-secondary btn-download-single-preview" data-id="${item.id}" style="padding: 5px 10px; font-size: 0.8rem;" title="Descargar solo este ${formatLabel}">
+            ${icons.download} Descargar ${formatLabel}
           </button>
           <button type="button" class="btn-icon btn-icon-danger btn-remove-preview" data-id="${item.id}" title="Quitar de la lista de preparación">
             ${icons.trash}
@@ -421,12 +438,12 @@ export const ui = {
   /**
    * Renders the preview staging list
    */
-  renderPreviewList(container, items) {
+  renderPreviewList(container, items, currentFormat = "mp3") {
     if (!items || items.length === 0) {
       container.innerHTML = "";
       return;
     }
-    container.innerHTML = items.map((i) => this.createPreviewCardHtml(i)).join("");
+    container.innerHTML = items.map((i) => this.createPreviewCardHtml(i, currentFormat)).join("");
   },
 
   /**

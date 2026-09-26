@@ -45,6 +45,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prevent browser caching of frontend static assets
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.endswith((".html", ".js", ".css")) or path == "/":
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 # Register API Routers
 app.include_router(api_router)
 app.include_router(sse_router)

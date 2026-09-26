@@ -4,6 +4,10 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 import uuid
 
+class DownloadFormat(str, Enum):
+    MP3 = "mp3"
+    MP4 = "mp4"
+
 class DownloadStatus(str, Enum):
     QUEUED = "queued"
     FETCHING_INFO = "fetching_info"
@@ -24,6 +28,7 @@ class DownloadProgress(BaseModel):
 class DownloadItem(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:10])
     url: str
+    format: DownloadFormat = DownloadFormat.MP3
     quality: str = "192"
     status: DownloadStatus = DownloadStatus.QUEUED
     title: Optional[str] = None
@@ -41,6 +46,7 @@ class DownloadItem(BaseModel):
 
 class BatchDownloadRequest(BaseModel):
     urls: list[str]
+    format: DownloadFormat = DownloadFormat.MP3
     quality: str = "192"
 
 class BatchDownloadResponse(BaseModel):

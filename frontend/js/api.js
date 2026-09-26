@@ -17,11 +17,11 @@ export const api = {
     return res.json();
   },
 
-  async addDownloads(urls, quality = "192") {
+  async addDownloads(urls, quality = "192", format = "mp3") {
     const res = await fetch("/api/downloads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ urls, quality }),
+      body: JSON.stringify({ urls, quality, format }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: "Error al enviar los enlaces" }));

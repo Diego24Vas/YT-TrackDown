@@ -4,11 +4,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-# Install system dependencies: FFmpeg, Node.js (for yt-dlp JS challenges), and CA certificates
+# Install system dependencies: FFmpeg, Node.js, Deno (official yt-dlp JS runtime), curl, unzip, and CA certificates
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     nodejs \
     ca-certificates \
+    curl \
+    unzip \
+    && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh \
+    && chmod 755 /usr/local/bin/deno \
     && rm -rf /var/lib/apt/lists/*
 
 # Create dedicated non-root user matching standard host UID/GID 1000
@@ -34,7 +38,8 @@ USER appuser
 ENV HOST=0.0.0.0 \
     PORT=8080 \
     FFMPEG_LOCATION=/usr/bin/ffmpeg \
-    NODE_PATH=/usr/bin/node
+    NODE_PATH=/usr/bin/node \
+    DENO_PATH=/usr/local/bin/deno
 
 EXPOSE 8080
 

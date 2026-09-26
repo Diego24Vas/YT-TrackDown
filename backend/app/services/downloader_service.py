@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from typing import Optional, Callable
 from backend.app.core.config import settings
-from backend.app.domain.models import DownloadItem, DownloadStatus, DownloadProgress
+from backend.app.domain.models import DownloadItem, DownloadStatus, DownloadProgress, DownloadFormat
 from backend.app.adapters.ytdlp_adapter import ytdlp_adapter
 from backend.app.adapters.storage_adapter import storage_adapter
 
@@ -34,23 +34,37 @@ class DownloaderService:
             logger.warning(f"Could not pre-fetch metadata for {item.url}: {e}")
             # Non-fatal: title will be retrieved during download
 
-    async def process_download(
+    def _resolve_error_message(self, err: Exception) -> str:
+        """Formats common yt-dlp error exceptions into friendly messages."""
+        err_str = str(err)
+        if "Sign in to confirm your age" in err_str or "confirm your age" in err_str:
+            if self.adapter.has_cookies():
+                return "Restricción de edad (+18): Las cookies actuales no tienen acceso o caducaron. Actualiza cookies.txt."
+            else:
+                return "Restricción de edad (+18): Requiere iniciar sesión. Configura tus cookies de YouTube en la barra superior."
+        elif "Sign in to confirm you're not a bot" in err_str or ("bot" in err_str.lower() and "confirm" in err_str.lower()):
+            return "YouTube solicitó verificación antibot. Configura cookies de YouTube en la barra superior para continuar."
+        elif "Video unavailable" in err_str:
+            return "El video no está disponible (privado, eliminado o bloqueado en tu región)."
+        elif "Private video" in err_str:
+            return "Este video es privado. Requiere cookies de una cuenta con permiso de visualización."
+        elif "members-only" in err_str.lower() or "join this channel" in err_str.lower():
+            return "Este video es exclusivo para miembros del canal de YouTube."
+        return f"Error al procesar: {err_str[:130]}"
+
+    async def process_audio_download(
         self,
         item: DownloadItem,
         loop: asyncio.AbstractEventLoop,
         notify_progress: Callable[[str, dict], None],
         notify_status: Callable[[str, DownloadStatus], None],
     ) -> DownloadItem:
-        """
-        Executes download and conversion in a background thread,
-        dispatching progress updates back to the event loop safely.
-        """
+        """Executes MP3 audio download and conversion in a background thread."""
         try:
             item.status = DownloadStatus.DOWNLOADING
             notify_status(item.id, DownloadStatus.DOWNLOADING)
 
             def sync_progress(data: dict):
-                # Thread-safe dispatch to main event loop
                 loop.call_soon_threadsafe(notify_progress, item.id, data)
 
             def sync_converting():
@@ -76,7 +90,7 @@ class DownloaderService:
             item.duration_str = result["duration_str"]
             if result.get("thumbnail"):
                 item.thumbnail = result["thumbnail"]
-            
+
             item.completed_at = datetime.now().isoformat()
             item.progress.percentage = 100.0
             item.progress.speed_str = ""
@@ -86,27 +100,79 @@ class DownloaderService:
             return item
 
         except Exception as e:
-            logger.error(f"Error downloading {item.url}: {e}", exc_info=True)
+            logger.error(f"Error downloading audio {item.url}: {e}", exc_info=True)
             item.status = DownloadStatus.ERROR
-            # Human readable message
-            err_str = str(e)
-            if "Sign in to confirm your age" in err_str or "confirm your age" in err_str:
-                if self.adapter.has_cookies():
-                    item.error_message = "Restricción de edad (+18): Las cookies actuales no tienen acceso o caducaron. Actualiza cookies.txt."
-                else:
-                    item.error_message = "Restricción de edad (+18): Requiere iniciar sesión. Configura tus cookies de YouTube en la barra superior."
-            elif "Sign in to confirm you're not a bot" in err_str or ("bot" in err_str.lower() and "confirm" in err_str.lower()):
-                item.error_message = "YouTube solicitó verificación antibot. Configura cookies de YouTube en la barra superior para continuar."
-            elif "Video unavailable" in err_str:
-                item.error_message = "El video no está disponible (privado, eliminado o bloqueado en tu región)."
-            elif "Private video" in err_str:
-                item.error_message = "Este video es privado. Requiere cookies de una cuenta con permiso de visualización."
-            elif "members-only" in err_str.lower() or "join this channel" in err_str.lower():
-                item.error_message = "Este video es exclusivo para miembros del canal de YouTube."
-            else:
-                item.error_message = f"Error al procesar: {err_str[:130]}"
-
+            item.error_message = self._resolve_error_message(e)
             notify_status(item.id, DownloadStatus.ERROR)
             return item
+
+    async def process_video_download(
+        self,
+        item: DownloadItem,
+        loop: asyncio.AbstractEventLoop,
+        notify_progress: Callable[[str, dict], None],
+        notify_status: Callable[[str, DownloadStatus], None],
+    ) -> DownloadItem:
+        """Executes MP4 video download and muxing in a background thread."""
+        try:
+            item.status = DownloadStatus.DOWNLOADING
+            notify_status(item.id, DownloadStatus.DOWNLOADING)
+
+            def sync_progress(data: dict):
+                loop.call_soon_threadsafe(notify_progress, item.id, data)
+
+            def sync_converting():
+                loop.call_soon_threadsafe(notify_status, item.id, DownloadStatus.CONVERTING)
+
+            result = await asyncio.to_thread(
+                self.adapter.download_video,
+                url=item.url,
+                output_dir=settings.DOWNLOADS_DIR,
+                item_id=item.id,
+                quality=item.quality,
+                on_progress=sync_progress,
+                on_converting=sync_converting,
+            )
+
+            item.status = DownloadStatus.COMPLETED
+            item.filename = result["filename"]
+            item.file_size = result["file_size"]
+            item.file_size_str = result["file_size_str"]
+            item.title = result["title"]
+            item.artist = result["artist"]
+            item.duration = result["duration"]
+            item.duration_str = result["duration_str"]
+            if result.get("thumbnail"):
+                item.thumbnail = result["thumbnail"]
+
+            item.completed_at = datetime.now().isoformat()
+            item.progress.percentage = 100.0
+            item.progress.speed_str = ""
+            item.progress.eta_str = ""
+
+            notify_status(item.id, DownloadStatus.COMPLETED)
+            return item
+
+        except Exception as e:
+            logger.error(f"Error downloading video {item.url}: {e}", exc_info=True)
+            item.status = DownloadStatus.ERROR
+            item.error_message = self._resolve_error_message(e)
+            notify_status(item.id, DownloadStatus.ERROR)
+            return item
+
+    async def process_download(
+        self,
+        item: DownloadItem,
+        loop: asyncio.AbstractEventLoop,
+        notify_progress: Callable[[str, dict], None],
+        notify_status: Callable[[str, DownloadStatus], None],
+    ) -> DownloadItem:
+        """
+        Dispatches download to dedicated audio or video processor without mixing logic.
+        """
+        if item.format == DownloadFormat.MP4:
+            return await self.process_video_download(item, loop, notify_progress, notify_status)
+        else:
+            return await self.process_audio_download(item, loop, notify_progress, notify_status)
 
 downloader_service = DownloaderService()

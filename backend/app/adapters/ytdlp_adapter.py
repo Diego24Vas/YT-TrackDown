@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 import logging
 from typing import Callable, Optional, Dict, Any
 from pathlib import Path
@@ -15,6 +16,7 @@ class YtDlpAdapter:
     def __init__(self):
         self.ffmpeg_location = settings.FFMPEG_LOCATION
         self.node_path = settings.NODE_PATH
+        self.deno_path = settings.DENO_PATH
 
     def _get_base_opts(self) -> Dict[str, Any]:
         """Returns standard options for yt_dlp extraction and downloading."""
@@ -25,7 +27,16 @@ class YtDlpAdapter:
             "remote_components": ["ejs:github"],
             "noplaylist": True,
             "updatetime": False,
+            "http_chunk_size": 10485760,  # 10MB chunks prevent YouTube 403 Forbidden drops on long/high-bitrate streams
+            "socket_timeout": 30,
+            "retries": 10,
+            "fragment_retries": 10,
+            "file_access_retries": 5,
         }
+        deno_bin = self.deno_path or shutil.which("deno")
+        if deno_bin and os.path.exists(str(deno_bin)):
+            opts["js_runtimes"] = {"deno": {"path": str(deno_bin)}}
+
         active_cookies = settings.get_active_cookies_file()
         if active_cookies:
             opts["cookiefile"] = str(active_cookies)
@@ -45,6 +56,10 @@ class YtDlpAdapter:
             "ffmpeg_location": self.ffmpeg_location,
             "remote_components": ["ejs:github"],
         }
+        deno_bin = self.deno_path or shutil.which("deno")
+        if deno_bin and os.path.exists(str(deno_bin)):
+            flat_opts["js_runtimes"] = {"deno": {"path": str(deno_bin)}}
+
         active_cookies = settings.get_active_cookies_file()
         if active_cookies:
             flat_opts["cookiefile"] = str(active_cookies)
@@ -237,6 +252,118 @@ class YtDlpAdapter:
             final_file = target_files[0]
             file_size = final_file.stat().st_size
             
+            return {
+                "filename": final_file.name,
+                "file_path": str(final_file),
+                "file_size": file_size,
+                "file_size_str": storage_adapter.format_bytes(file_size),
+                "title": title,
+                "artist": artist,
+                "duration": duration,
+                "duration_str": storage_adapter.format_duration(duration),
+                "thumbnail": thumbnail,
+            }
+
+    def download_video(
+        self,
+        url: str,
+        output_dir: Path,
+        item_id: str,
+        quality: str = "1080",
+        on_progress: Optional[Callable[[Dict[str, Any]], None]] = None,
+        on_converting: Optional[Callable[[], None]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Downloads video and audio from url, merges into mp4 format, and calls progress hooks.
+        Returns final file details: {filename, file_path, file_size, title, artist, thumbnail}
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+        out_template = str(output_dir / f"{item_id}_%(title).100B.%(ext)s")
+
+        def progress_hook(d: Dict[str, Any]):
+            if d.get("status") == "downloading" and on_progress:
+                total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                downloaded = d.get("downloaded_bytes") or 0
+                percentage = (downloaded / total * 100.0) if total > 0 else 0.0
+
+                speed = d.get("speed")
+                speed_str = f"{storage_adapter.format_bytes(speed)}/s" if speed else ""
+
+                eta = d.get("eta")
+                eta_str = storage_adapter.format_duration(eta) if eta is not None else ""
+
+                on_progress({
+                    "percentage": min(99.0, round(percentage, 1)),
+                    "downloaded_bytes": downloaded,
+                    "total_bytes": total,
+                    "speed_str": speed_str,
+                    "eta_str": eta_str,
+                })
+            elif d.get("status") == "finished":
+                if on_progress:
+                    on_progress({
+                        "percentage": 100.0,
+                        "downloaded_bytes": d.get("total_bytes") or 0,
+                        "total_bytes": d.get("total_bytes") or 0,
+                        "speed_str": "Completando...",
+                        "eta_str": "0:00",
+                    })
+
+        def postprocessor_hook(d: Dict[str, Any]):
+            status = d.get("status")
+            if status == "started" and on_converting:
+                on_converting()
+
+        # Build format selector based on target resolution
+        if quality and quality.isdigit():
+            h = int(quality)
+            format_selector = (
+                f"bestvideo[height<={h}][ext=mp4]+bestaudio[ext=m4a]/"
+                f"bestvideo[height<={h}]+bestaudio/"
+                f"best[height<={h}]/best"
+            )
+        else:
+            format_selector = (
+                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
+                "bestvideo+bestaudio/"
+                "best"
+            )
+
+        opts = self._get_base_opts()
+        opts.update({
+            "format": format_selector,
+            "outtmpl": out_template,
+            "merge_output_format": "mp4",
+            "postprocessors": [
+                {
+                    "key": "FFmpegMetadata",
+                    "add_metadata": True,
+                },
+            ],
+            "progress_hooks": [progress_hook],
+            "postprocessor_hooks": [postprocessor_hook],
+        })
+
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            if "entries" in info:
+                info = list(info["entries"])[0]
+
+            title = info.get("title") or "video"
+            artist = info.get("artist") or info.get("uploader") or info.get("channel") or ""
+            duration = info.get("duration") or 0
+            thumbnail = info.get("thumbnail")
+
+            # Locate the generated .mp4 file
+            target_files = list(output_dir.glob(f"{item_id}_*.mp4"))
+            if not target_files:
+                target_files = [f for f in output_dir.glob(f"{item_id}_*") if f.suffix.lower() in [".mp4", ".mkv", ".webm"]]
+            if not target_files:
+                raise FileNotFoundError("El archivo de video .mp4 no fue generado correctamente.")
+
+            final_file = target_files[0]
+            file_size = final_file.stat().st_size
+
             return {
                 "filename": final_file.name,
                 "file_path": str(final_file),

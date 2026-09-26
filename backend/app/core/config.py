@@ -56,11 +56,24 @@ class Settings(BaseModel):
         "NODE_PATH",
         shutil.which("node") or "/usr/bin/node"
     )
+    DENO_PATH: Optional[str] = os.getenv(
+        "DENO_PATH",
+        shutil.which("deno") or ("/usr/local/bin/deno" if Path("/usr/local/bin/deno").is_file() else None)
+    )
     
     # Concurrency and Limits
     MAX_CONCURRENT_DOWNLOADS: int = int(os.getenv("MAX_CONCURRENT_DOWNLOADS", "2"))
+    
+    # Formats and Qualities (separate configurations for audio and video)
+    DEFAULT_FORMAT: str = os.getenv("DEFAULT_FORMAT", "mp3")  # "mp3" or "mp4"
+    ALLOWED_FORMATS: list[str] = ["mp3", "mp4"]
+
     DEFAULT_AUDIO_QUALITY: str = os.getenv("DEFAULT_AUDIO_QUALITY", "192")  # kbps
-    ALLOWED_QUALITIES: list[str] = ["128", "192", "256", "320"]
+    ALLOWED_AUDIO_QUALITIES: list[str] = ["128", "192", "256", "320"]
+    ALLOWED_QUALITIES: list[str] = ["128", "192", "256", "320"]  # backward compatibility alias
+
+    DEFAULT_VIDEO_QUALITY: str = os.getenv("DEFAULT_VIDEO_QUALITY", "1080")  # resolution height: 1080, 720, 480, 360, best
+    ALLOWED_VIDEO_QUALITIES: list[str] = ["best", "1080", "720", "480", "360"]
 
     # File Retention & Auto-Cleanup (in minutes, default: 15)
     FILE_RETENTION_MINUTES: int = int(os.getenv("FILE_RETENTION_MINUTES", "15"))

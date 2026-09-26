@@ -130,4 +130,53 @@ def test_cookies_endpoints(client):
     assert del_res.json()["success"] is True
     assert del_res.json()["status"]["has_cookies"] is False
 
+def test_add_downloads_video_batch(client):
+    payload = {
+        "urls": [
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        ],
+        "format": "mp4",
+        "quality": "1080"
+    }
+    response = client.post("/api/downloads", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["count"] == 1
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert item["format"] == "mp4"
+    assert item["quality"] == "1080"
+
+def test_download_file_mp4_response(client, tmp_path, monkeypatch):
+    from backend.app.core.config import settings
+    from backend.app.adapters.storage_adapter import storage_adapter
+    from backend.app.domain.models import DownloadItem, DownloadFormat, DownloadStatus
+
+    # Create dummy mp4 file
+    test_mp4 = settings.DOWNLOADS_DIR / "testvid123_Awesome_Music_Video.mp4"
+    test_mp4.write_bytes(b"dummy mp4 content")
+
+    item = DownloadItem(
+        id="testvid123",
+        url="https://www.youtube.com/watch?v=mockvid",
+        format=DownloadFormat.MP4,
+        quality="1080",
+        status=DownloadStatus.COMPLETED,
+        title="Awesome Music Video (Official Video)",
+        filename="testvid123_Awesome_Music_Video.mp4",
+    )
+    queue_service._items[item.id] = item
+
+    try:
+        res = client.get(f"/api/downloads/{item.id}/file")
+        assert res.status_code == 200
+        assert res.headers["content-type"] == "video/mp4"
+        assert ".mp4" in res.headers["content-disposition"]
+        assert "Awesome Music Video.mp4" in res.headers["content-disposition"]
+    finally:
+        queue_service._items.pop(item.id, None)
+        if test_mp4.exists():
+            test_mp4.unlink()
+
+
 

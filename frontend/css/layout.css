@@ -335,15 +335,6 @@
     min-height: 44px; /* Touch target HIG */
   }
 
-  /* Submit Downloads Button */
-  #btn-submit-downloads {
-    width: 100%;
-    min-height: 44px; /* Touch target HIG */
-    font-size: 0.92rem;
-    justify-content: center;
-    box-sizing: border-box;
-  }
-
   /* Preview Section */
   .preview-section {
     padding: 12px;

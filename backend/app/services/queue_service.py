@@ -7,6 +7,7 @@ from backend.app.domain.models import (
     DownloadItem,
     DownloadStatus,
     DownloadProgress,
+    DownloadFormat,
     SystemStats,
 )
 from backend.app.services.downloader_service import downloader_service
@@ -201,7 +202,12 @@ class QueueService:
             item.status = status
             self.broadcast_event("item_updated", item.model_dump())
 
-    async def add_items(self, urls: List[str], quality: str = "192") -> List[DownloadItem]:
+    async def add_items(
+        self,
+        urls: List[str],
+        quality: str = "192",
+        format: DownloadFormat = DownloadFormat.MP3,
+    ) -> List[DownloadItem]:
         """Validates and enqueues a batch of URLs, automatically expanding any playlists."""
         created_items: List[DownloadItem] = []
         for raw_url in urls:
@@ -222,6 +228,7 @@ class QueueService:
                 item = DownloadItem(
                     url=v_url,
                     quality=quality,
+                    format=format,
                     status=DownloadStatus.QUEUED,
                     title=entry.get("title"),
                     artist=entry.get("artist"),
