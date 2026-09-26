@@ -457,11 +457,82 @@ export const ui = {
    * Renders the preview staging list
    */
   renderPreviewList(container, items, currentFormat = "mp3") {
+    if (!container) return;
     if (!items || items.length === 0) {
       container.innerHTML = "";
       return;
     }
-    container.innerHTML = items.map((i) => this.createPreviewCardHtml(i, currentFormat)).join("");
+
+    // Always remove all skeleton loading cards before rendering or reconciling real cards
+    container.querySelectorAll(".preview-card-skeleton").forEach((el) => el.remove());
+
+    const currentFmtAttr = container.dataset.renderedFormat;
+    if (currentFmtAttr !== currentFormat) {
+      container.dataset.renderedFormat = currentFormat;
+      container.innerHTML = items.map((i) => this.createPreviewCardHtml(i, currentFormat)).join("");
+      return;
+    }
+
+    const itemIds = new Set(items.map((i) => i.id));
+    // Remove cards no longer in items
+    const existingCards = container.querySelectorAll(".preview-card:not(.preview-card-skeleton)");
+    existingCards.forEach((card) => {
+      const cardId = card.id ? card.id.replace("preview-card-", "") : null;
+      if (cardId && !itemIds.has(cardId)) {
+        card.remove();
+      }
+    });
+
+    // Append new cards that don't exist yet
+    items.forEach((item) => {
+      const existing = document.getElementById(`preview-card-${item.id}`);
+      if (!existing) {
+        const temp = document.createElement("div");
+        temp.innerHTML = this.createPreviewCardHtml(item, currentFormat).trim();
+        if (temp.firstElementChild) {
+          container.appendChild(temp.firstElementChild);
+        }
+      }
+    });
+  },
+
+  /**
+   * Appends skeleton card placeholders to an existing preview section
+   */
+  appendPreviewLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    const isVideo = currentFormat === "mp4";
+    const countClamped = Math.min(Math.max(count, 1), 5);
+
+    let skeletonsHtml = "";
+    for (let i = 0; i < countClamped; i++) {
+      skeletonsHtml += `
+        <div class="preview-card preview-card-skeleton" aria-hidden="true">
+          <div class="preview-thumb-box skeleton-shimmer">
+            <div class="skeleton-thumb-icon">${isVideo ? icons.video : icons.music}</div>
+          </div>
+          <div class="preview-info">
+            <div class="skeleton-shimmer skeleton-line skeleton-line-title"></div>
+            <div class="skeleton-shimmer skeleton-line skeleton-line-meta"></div>
+          </div>
+          <div class="preview-actions">
+            <div class="skeleton-shimmer skeleton-btn-placeholder"></div>
+            <div class="skeleton-shimmer skeleton-btn-icon-placeholder"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    container.insertAdjacentHTML("beforeend", skeletonsHtml);
+  },
+
+  /**
+   * Renders sleek skeleton placeholders in the preview section while loading
+   */
+  renderPreviewLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    container.innerHTML = "";
+    this.appendPreviewLoading(container, count, currentFormat);
   },
 
   /**
@@ -502,14 +573,15 @@ export const ui = {
   /**
    * Builds single rectangular link chip HTML string with remove button on right
    */
-  createChipHtml(url) {
+  createChipHtml(url, isLoading = false) {
     const info = this.getUrlPlatformInfo(url);
     const escapedUrl = url.replace(/"/g, "&quot;");
+    const loadingClass = isLoading ? "is-loading" : "";
 
     return `
-      <div class="composer-chip" data-url="${escapedUrl}" title="${escapedUrl}">
+      <div class="composer-chip ${loadingClass}" data-url="${escapedUrl}" title="${escapedUrl}">
         <span class="composer-chip-icon ${info.iconClass}">
-          ${info.icon}
+          ${isLoading ? icons.spinner : info.icon}
         </span>
         <span class="composer-chip-text" title="${escapedUrl}">
           ${escapedUrl}
@@ -525,13 +597,23 @@ export const ui = {
   /**
    * Renders rectangular chips in the composer tray
    */
-  renderChips(container, urls) {
+  renderChips(container, urls, loadingUrls = []) {
     if (!container) return;
     if (!urls || urls.length === 0) {
       container.innerHTML = "";
       return;
     }
-    container.innerHTML = urls.map((u) => this.createChipHtml(u)).join("");
+    const isArrayOrSet = Array.isArray(loadingUrls) || loadingUrls instanceof Set;
+    container.innerHTML = urls.map((u) => {
+      let isLoading = false;
+      if (typeof loadingUrls === "boolean") {
+        isLoading = loadingUrls;
+      } else if (isArrayOrSet) {
+        const list = Array.from(loadingUrls);
+        isLoading = list.some((lu) => this.urlsMatch(lu, u));
+      }
+      return this.createChipHtml(u, isLoading);
+    }).join("");
   },
 
   /**

@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=1.5.6";
-import { store } from "./store.js?v=1.5.6";
-import { ui, icons } from "./ui.js?v=1.5.6";
+import { api } from "./api.js?v=1.6.3";
+import { store } from "./store.js?v=1.6.3";
+import { ui, icons } from "./ui.js?v=1.6.3";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
@@ -215,6 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const previewItems = store.getPreviewItems();
       if (previewItems.length > 0 && previewList) {
         ui.renderPreviewList(previewList, previewItems, currentFormat);
+      } else if (isPreviewLoading && previewList) {
+        ui.renderPreviewLoading(previewList, activeUrls.length, currentFormat);
       }
     };
 
@@ -230,10 +232,59 @@ document.addEventListener("DOMContentLoaded", () => {
   // Active URLs state for composer tray
   let activeUrls = [];
 
+  // Helper to smoothly animate and dismiss the preview section
+  let dismissTimeout = null;
+
+  const cancelDismissPreview = () => {
+    if (dismissTimeout) {
+      clearTimeout(dismissTimeout);
+      dismissTimeout = null;
+    }
+    if (previewSection) {
+      previewSection.classList.remove("is-collapsing");
+      previewSection.classList.remove("fade-out");
+      previewSection.style.maxHeight = "";
+      previewSection.style.marginBottom = "";
+    }
+  };
+
+  const dismissPreviewSection = (callback) => {
+    if (!previewSection || previewSection.style.display === "none") {
+      if (callback) callback();
+      return;
+    }
+    if (previewSection.classList.contains("is-collapsing")) {
+      return;
+    }
+
+    if (dismissTimeout) {
+      clearTimeout(dismissTimeout);
+      dismissTimeout = null;
+    }
+
+    // Capture current height so CSS transitions max-height, padding, and margin seamlessly to 0
+    const currentHeight = previewSection.offsetHeight;
+    previewSection.style.maxHeight = `${currentHeight}px`;
+    void previewSection.offsetHeight; // Force reflow
+
+    previewSection.classList.add("is-collapsing");
+
+    // Wait until transition fully finishes (350ms >= 340ms transition duration)
+    dismissTimeout = setTimeout(() => {
+      dismissTimeout = null;
+      previewSection.style.display = "none";
+      previewSection.classList.remove("is-collapsing");
+      previewSection.style.maxHeight = "";
+      previewSection.style.marginBottom = "";
+      previewList.innerHTML = "";
+      if (callback) callback();
+    }, 350);
+  };
+
   // Renders rectangular chips in the composer tray
-  const renderChips = () => {
+  const renderChips = (loadingUrls = []) => {
     if (!composerChipsWrap) return;
-    ui.renderChips(composerChipsWrap, activeUrls);
+    ui.renderChips(composerChipsWrap, activeUrls, loadingUrls);
   };
 
   // Synchronize active URLs state with UI, counters, and hidden textarea
@@ -279,9 +330,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Synchronize preview in real time if requested
     if (syncPreview) {
       if (count === 0) {
-        dismissPreviewSection(() => {
-          store.clearPreview();
-        });
+        store.clearPreview();
+        dismissPreviewSection();
       } else {
         const previewItems = store.getPreviewItems();
         if (previewItems.length > 0) {
@@ -296,22 +346,66 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Helper to fetch preview and stage items without downloading yet
+  // Helper to fetch preview and stage items incrementally without downloading yet
+  let pendingPreviewUrls = [];
   let isPreviewLoading = false;
 
-  const handlePreview = async (urls) => {
-    if (!urls || urls.length === 0 || isPreviewLoading) return;
+  const processPreviewQueue = async () => {
+    if (isPreviewLoading || pendingPreviewUrls.length === 0) return;
+    cancelDismissPreview();
     isPreviewLoading = true;
 
+    // Pop the current batch of URLs to fetch
+    const urlsToFetch = [...pendingPreviewUrls];
+    pendingPreviewUrls = [];
+
+    // Mark ONLY the newly added URLs as loading in the chips tray
+    renderChips(urlsToFetch);
+
     if (linkCounterChip) {
-      linkCounterChip.innerHTML = `${icons.spinner} Inspeccionando enlaces...`;
+      const count = urlsToFetch.length;
+      linkCounterChip.innerHTML = `${icons.spinner} Inspeccionando ${count === 1 ? "nuevo enlace" : count + " nuevos enlaces"}...`;
       linkCounterChip.classList.add("has-links");
     }
 
+    // Immediately display preview section with loading skeleton for ONLY the new items
+    if (previewSection && previewList) {
+      cancelDismissPreview();
+      previewSection.style.display = "flex";
+
+      const existingItems = store.getPreviewItems();
+      if (existingItems.length === 0) {
+        ui.renderPreviewLoading(previewList, urlsToFetch.length, currentFormat);
+      } else {
+        // Keep existing rendered cards intact! Remove residual skeletons if any, and append new skeletons
+        previewList.querySelectorAll(".preview-card-skeleton").forEach((el) => el.remove());
+        ui.appendPreviewLoading(previewList, urlsToFetch.length, currentFormat);
+      }
+
+      const totalAnticipated = existingItems.length + urlsToFetch.length;
+      if (previewCounter) previewCounter.textContent = `${totalAnticipated}`;
+      if (previewBtnCount) previewBtnCount.textContent = `${totalAnticipated}`;
+      updatePreviewHeader();
+
+      // Disable preview download button while loading new batch
+      if (btnDownloadAllPreview) {
+        btnDownloadAllPreview.setAttribute("disabled", "true");
+        btnDownloadAllPreview.style.opacity = "0.5";
+        btnDownloadAllPreview.style.pointerEvents = "none";
+      }
+    }
+
     try {
-      const res = await api.getPreview(urls);
+      const res = await api.getPreview(urlsToFetch);
+      // Clean up all skeleton placeholders as soon as the response arrives
+      if (previewList) {
+        previewList.querySelectorAll(".preview-card-skeleton").forEach((el) => el.remove());
+      }
+
       if (res.items && res.items.length > 0) {
-        store.setPreviewItems(res.items);
+        // Add new items to store (preserving existing previsualized items)
+        store.addPreviewItems(res.items);
+
         const entityLabel = currentFormat === "mp4"
           ? (res.count === 1 ? "video" : "videos")
           : (res.count === 1 ? "pista" : "pistas");
@@ -319,13 +413,60 @@ document.addEventListener("DOMContentLoaded", () => {
           `Se ${res.count === 1 ? "preparó 1 " + entityLabel : "prepararon " + res.count + " " + entityLabel} en la lista inferior.`,
           "success"
         );
+      } else {
+        if (previewList) {
+          previewList.querySelectorAll(".preview-card-skeleton").forEach((el) => el.remove());
+        }
+        if (store.getPreviewItems().length === 0) {
+          dismissPreviewSection(() => store.clearPreview());
+        }
       }
     } catch (err) {
       ui.showToast(err.message, "error");
+      if (previewList) {
+        previewList.querySelectorAll(".preview-card-skeleton").forEach((el) => el.remove());
+      }
+      if (store.getPreviewItems().length === 0) {
+        dismissPreviewSection(() => store.clearPreview());
+      }
     } finally {
       isPreviewLoading = false;
+      renderChips(); // Clear loading spinners on chips
       syncUrlsToUI(false);
+      if (btnDownloadAllPreview) {
+        btnDownloadAllPreview.removeAttribute("disabled");
+        btnDownloadAllPreview.style.opacity = "";
+        btnDownloadAllPreview.style.pointerEvents = "";
+      }
+
+      // If more URLs arrived while this batch was processing, continue next batch immediately
+      if (pendingPreviewUrls.length > 0) {
+        processPreviewQueue();
+      }
     }
+  };
+
+  const handlePreview = (urls) => {
+    if (!urls || urls.length === 0) return;
+    cancelDismissPreview();
+    const currentPreviewItems = store.getPreviewItems();
+
+    // Filter to only URLs that are NOT already in the store preview list and NOT already pending
+    const urlsToFetch = urls.filter((u) => {
+      const trimmed = u.trim();
+      if (!trimmed) return false;
+      const alreadyPreviewed = currentPreviewItems.some((item) => ui.itemMatchesUrlList(item, [trimmed]));
+      const alreadyPending = pendingPreviewUrls.some((p) => ui.urlsMatch(p, trimmed));
+      return !alreadyPreviewed && !alreadyPending;
+    });
+
+    if (urlsToFetch.length === 0) {
+      syncUrlsToUI(false);
+      return;
+    }
+
+    pendingPreviewUrls.push(...urlsToFetch);
+    processPreviewQueue();
   };
 
   // Adds URLs to tray as rectangular chips
@@ -377,6 +518,8 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    pendingPreviewUrls = pendingPreviewUrls.filter((u) => !ui.urlsMatch(u, urlToRemove));
+
     setTimeout(() => {
       activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, urlToRemove));
       renderChips();
@@ -385,30 +528,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 140);
   };
 
-  // Helper to smoothly animate and dismiss the preview section
-  const dismissPreviewSection = (callback) => {
-    if (!previewSection || previewSection.style.display === "none") {
-      if (callback) callback();
-      return;
-    }
-    previewSection.classList.add("fade-out");
-    setTimeout(() => {
-      previewSection.style.display = "none";
-      previewSection.classList.remove("fade-out");
-      previewList.innerHTML = "";
-      if (callback) callback();
-    }, 240);
-  };
-
-  // Clears all chips and input from the tray completely
+  // Clears all chips and input from the tray completely with smooth coordinated exit
   const clearTray = () => {
-    activeUrls = [];
+    cancelDismissPreview();
+    pendingPreviewUrls = [];
     if (composerInput) composerInput.value = "";
-    renderChips();
-    syncUrlsToUI(false);
+
+    // Animate chips out smoothly if present
+    if (composerChipsWrap) {
+      const chips = composerChipsWrap.querySelectorAll(".composer-chip");
+      chips.forEach((c) => c.classList.add("is-removing"));
+    }
+
+    activeUrls = [];
+    store.clearPreview();
+
     dismissPreviewSection(() => {
-      store.clearPreview();
+      renderChips();
+      syncUrlsToUI(false);
     });
+
+    // Clean up chip DOM after exit animation
+    setTimeout(() => {
+      renderChips();
+      syncUrlsToUI(false);
+    }, 180);
   };
 
   // Click on 'X' button to remove link chip completely
@@ -603,27 +747,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const itemToRemove = items.find((i) => i.id === id);
 
         if (items.length <= 1) {
+          const card = document.getElementById(`preview-card-${id}`);
+          if (card) card.classList.add("is-removing");
           clearTray();
           return;
         }
 
-        store.removePreviewItem(id);
+        const card = document.getElementById(`preview-card-${id}`);
+        if (card) {
+          card.classList.add("is-removing");
+        }
 
-        if (itemToRemove && activeUrls.length > 0) {
-          if (itemToRemove.playlist_id) {
-            const remaining = store.getPreviewItems();
-            const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === itemToRemove.playlist_id);
-            if (!stillHasSamePlaylist) {
-              activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== itemToRemove.playlist_id);
+        setTimeout(() => {
+          store.removePreviewItem(id);
+
+          if (itemToRemove && activeUrls.length > 0) {
+            if (itemToRemove.playlist_id) {
+              const remaining = store.getPreviewItems();
+              const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === itemToRemove.playlist_id);
+              if (!stillHasSamePlaylist) {
+                activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== itemToRemove.playlist_id);
+                renderChips();
+                syncUrlsToUI(false);
+              }
+            } else {
+              activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, itemToRemove.url));
               renderChips();
               syncUrlsToUI(false);
             }
-          } else {
-            activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, itemToRemove.url));
-            renderChips();
-            syncUrlsToUI(false);
           }
-        }
+        }, 250);
         return;
       }
 
@@ -639,23 +792,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const willBeEmpty = items.length <= 1;
           if (willBeEmpty) {
+            const card = document.getElementById(`preview-card-${id}`);
+            if (card) card.classList.add("is-removing");
             clearTray();
           } else {
-            store.removePreviewItem(id);
+            const card = document.getElementById(`preview-card-${id}`);
+            if (card) {
+              card.classList.add("is-removing");
+            }
+            setTimeout(() => {
+              store.removePreviewItem(id);
 
-            if (target.playlist_id) {
-              const remaining = store.getPreviewItems();
-              const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === target.playlist_id);
-              if (!stillHasSamePlaylist) {
-                activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== target.playlist_id);
+              if (target.playlist_id) {
+                const remaining = store.getPreviewItems();
+                const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === target.playlist_id);
+                if (!stillHasSamePlaylist) {
+                  activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== target.playlist_id);
+                  renderChips();
+                  syncUrlsToUI(false);
+                }
+              } else {
+                activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, target.url));
                 renderChips();
                 syncUrlsToUI(false);
               }
-            } else {
-              activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, target.url));
-              renderChips();
-              syncUrlsToUI(false);
-            }
+            }, 250);
           }
 
           api.addDownloads([target.url], quality, format).then(() => {
@@ -868,7 +1029,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event === "preview_updated") {
       const previewItems = store.getPreviewItems();
       if (previewItems.length > 0) {
-        previewSection.classList.remove("fade-out");
+        cancelDismissPreview();
         previewSection.style.display = "flex";
         previewCounter.textContent = `${previewItems.length}`;
         previewBtnCount.textContent = `${previewItems.length}`;
@@ -879,9 +1040,8 @@ document.addEventListener("DOMContentLoaded", () => {
         updatePreviewHeader();
         ui.renderPreviewList(previewList, previewItems, currentFormat);
       } else {
-        if (!previewSection.classList.contains("fade-out")) {
-          previewSection.style.display = "none";
-          previewList.innerHTML = "";
+        if (!previewSection.classList.contains("is-collapsing") && previewSection.style.display !== "none") {
+          dismissPreviewSection();
         }
       }
       return;

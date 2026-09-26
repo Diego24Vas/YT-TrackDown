@@ -2,13 +2,14 @@
    Layout & Structure
    ========================================================================== */
 .app-container {
+  --container-gap: 32px;
   width: 100%;
   max-width: 860px;
   margin: 0 auto;
   padding: 32px 20px 80px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: var(--container-gap);
 }
 
 /* Header */
@@ -215,11 +216,12 @@
    ========================================================================== */
 @media (max-width: 640px) {
   .app-container {
+    --container-gap: 20px;
     padding: 16px 12px 60px;
     padding-left: max(12px, env(safe-area-inset-left));
     padding-right: max(12px, env(safe-area-inset-right));
     padding-bottom: max(60px, env(safe-area-inset-bottom));
-    gap: 20px;
+    gap: var(--container-gap);
     overflow-x: hidden;
   }
 
@@ -396,6 +398,10 @@
   .preview-card {
     padding: 8px 10px;
     gap: 10px;
+  }
+
+  .skeleton-btn-placeholder {
+    width: 70px;
   }
 
   .preview-thumb-box {
@@ -581,8 +587,9 @@
 /* Extra small devices (phones <= 360px, e.g. Galaxy A55 compact, iPhone SE) */
 @media (max-width: 360px) {
   .app-container {
+    --container-gap: 16px;
     padding: 12px 8px 48px;
-    gap: 16px;
+    gap: var(--container-gap);
   }
 
   .hero-title {
