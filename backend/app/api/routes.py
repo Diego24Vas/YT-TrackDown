@@ -81,16 +81,20 @@ async def create_downloads(request: BatchDownloadRequest):
     if not cleaned_urls and not metadata_items:
         raise HTTPException(status_code=400, detail="Debe proporcionar al menos una URL válida.")
 
-    # Resolve format with quality-based inference fallback (prevents old cached clients from mismatching)
-    target_format = request.format
-    if target_format == DownloadFormat.MP3 and request.quality in settings.ALLOWED_VIDEO_QUALITIES:
-        target_format = DownloadFormat.MP4
-    elif target_format == DownloadFormat.MP4 and request.quality in settings.ALLOWED_AUDIO_QUALITIES:
-        target_format = DownloadFormat.MP3
+    # Strictly preserve requested format and sanitize quality accordingly
+    target_format = DownloadFormat.MP4 if str(request.format).lower() in ("mp4", "downloadformat.mp4") else DownloadFormat.MP3
+    target_quality = str(request.quality or "").strip().lower()
+
+    if target_format == DownloadFormat.MP4:
+        if target_quality not in settings.ALLOWED_VIDEO_QUALITIES:
+            target_quality = settings.DEFAULT_VIDEO_QUALITY
+    else:
+        if target_quality not in settings.ALLOWED_AUDIO_QUALITIES:
+            target_quality = settings.DEFAULT_AUDIO_QUALITY
 
     items = await queue_service.add_items(
         cleaned_urls,
-        quality=request.quality,
+        quality=target_quality,
         format=target_format,
         metadata_items=metadata_items,
     )

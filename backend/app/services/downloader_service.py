@@ -170,7 +170,8 @@ class DownloaderService:
         """
         Dispatches download to dedicated audio or video processor without mixing logic.
         """
-        if item.format == DownloadFormat.MP4:
+        is_video = (item.format == DownloadFormat.MP4) or str(item.format).lower() in ("mp4", "downloadformat.mp4")
+        if is_video:
             return await self.process_video_download(item, loop, notify_progress, notify_status)
         else:
             return await self.process_audio_download(item, loop, notify_progress, notify_status)

@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=1.6.9";
-import { store } from "./store.js?v=1.6.9";
-import { ui, icons } from "./ui.js?v=1.6.9";
+import { api } from "./api.js?v=1.7.0";
+import { store } from "./store.js?v=1.7.0";
+import { ui, icons } from "./ui.js?v=1.7.0";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
@@ -596,6 +596,12 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(() => composerInput.classList.remove("input-shake"), 350);
             ui.showToast("Ingresa un enlace válido (ej. https://...)", "error");
           }
+        } else if (store.getPreviewItems().length > 0) {
+          if (isPreviewLoading) {
+            ui.showToast("Inspeccionando enlaces, un momento...", "info");
+          } else if (btnDownloadAllPreview && !btnDownloadAllPreview.hasAttribute("disabled")) {
+            btnDownloadAllPreview.click();
+          }
         } else if (activeUrls.length > 0) {
           handlePreview(activeUrls);
         }
@@ -646,6 +652,20 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Global Enter shortcut: if preview cards are staged and user presses Enter outside other form controls, trigger download
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.target.closest("button, a, select, textarea, .modal-card, #cookies-modal")) {
+      if (e.target === composerInput && composerInput.value.trim().length > 0) {
+        return; // Handled by composerInput's own Enter listener
+      }
+      const previewItems = store.getPreviewItems();
+      if (previewItems.length > 0 && !isPreviewLoading && btnDownloadAllPreview && !btnDownloadAllPreview.hasAttribute("disabled")) {
+        e.preventDefault();
+        btnDownloadAllPreview.click();
+      }
+    }
+  });
 
   // Drag and drop onto composer tray
   if (inputComposer) {
@@ -714,9 +734,16 @@ document.addEventListener("DOMContentLoaded", () => {
       if (previewItems.length === 0) return;
 
       const urls = previewItems.map((i) => i.url);
-      const quality = selectQuality.value;
-      const count = previewItems.length;
       const format = currentFormat;
+      let quality = selectQuality ? selectQuality.value : null;
+      if (format === "mp4") {
+        const isVideoQ = videoQualities.some((q) => q.value === quality);
+        if (!isVideoQ) quality = "1080";
+      } else {
+        const isAudioQ = audioQualities.some((q) => q.value === quality);
+        if (!isAudioQ) quality = "192";
+      }
+      const count = previewItems.length;
       const formatUpper = format.toUpperCase();
 
       // 1. Immediately show queue section and register pending skeletons in store!
@@ -810,8 +837,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const items = store.getPreviewItems();
         const target = items.find((i) => i.id === id);
         if (target) {
-          const quality = selectQuality.value;
           const format = currentFormat;
+          let quality = selectQuality ? selectQuality.value : null;
+          if (format === "mp4") {
+            const isVideoQ = videoQualities.some((q) => q.value === quality);
+            if (!isVideoQ) quality = "1080";
+          } else {
+            const isAudioQ = audioQualities.some((q) => q.value === quality);
+            if (!isAudioQ) quality = "192";
+          }
           btnDownloadSingle.setAttribute("disabled", "true");
 
           // Immediately show queue section with shimmer skeleton for this item

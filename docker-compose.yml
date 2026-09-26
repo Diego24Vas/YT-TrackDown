@@ -18,4 +18,5 @@ services:
     volumes:
       - ./downloads:/app/downloads:z
       - ./cookies:/app/cookies:z
+      - ./backend:/app/backend:z
       - ./frontend:/app/frontend:ro,z

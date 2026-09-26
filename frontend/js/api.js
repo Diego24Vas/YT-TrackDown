@@ -17,8 +17,9 @@ export const api = {
     return res.json();
   },
 
-  async addDownloads(urls, quality = "192", format = "mp3", items = null) {
-    const payload = { urls, quality, format };
+  async addDownloads(urls, quality = null, format = "mp3", items = null) {
+    const resolvedQuality = quality || (format === "mp4" ? "1080" : "192");
+    const payload = { urls, quality: resolvedQuality, format };
     if (items && Array.isArray(items) && items.length > 0) {
       payload.items = items.map((i) => ({
         url: i.url,

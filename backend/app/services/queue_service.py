@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Set, AsyncGenerator
+from typing import Dict, List, Optional, Set, AsyncGenerator, Any
 from backend.app.core.config import settings
 from backend.app.domain.models import (
     DownloadItem,
