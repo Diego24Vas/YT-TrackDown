@@ -398,6 +398,13 @@
   .preview-card {
     padding: 8px 10px;
     gap: 10px;
+    min-height: 56px;
+    flex-shrink: 0;
+  }
+
+  .preview-card-skeleton {
+    min-height: 56px;
+    flex-shrink: 0;
   }
 
   .skeleton-btn-placeholder {
@@ -408,6 +415,8 @@
     width: 60px;
     height: 40px;
     min-width: 60px;
+    min-height: 40px;
+    flex-shrink: 0;
   }
 
   .preview-track-title {

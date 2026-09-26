@@ -1276,6 +1276,18 @@
   padding-right: 4px;
 }
 
+/* Custom subtle scrollbar for preview list */
+.preview-list::-webkit-scrollbar {
+  width: 5px;
+}
+.preview-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.preview-list::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: var(--radius-full);
+}
+
 .preview-card {
   display: flex;
   align-items: center;
@@ -1284,6 +1296,8 @@
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  flex-shrink: 0;
+  min-height: 68px;
   transition: 
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -1315,6 +1329,7 @@
   opacity: 0 !important;
   transform: translateX(18px) scale(0.97) !important;
   max-height: 0 !important;
+  min-height: 0 !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   margin-top: 0 !important;
@@ -1335,6 +1350,8 @@
   width: 72px;
   height: 46px;
   min-width: 72px;
+  min-height: 46px;
+  flex-shrink: 0;
   border-radius: var(--radius-sm);
   overflow: hidden;
   position: relative;
@@ -1407,6 +1424,8 @@
   border-color: var(--border-subtle);
   background-color: var(--bg-surface);
   opacity: 0.88;
+  flex-shrink: 0;
+  min-height: 68px;
 }
 
 .preview-thumb-box .skeleton-thumb-icon {

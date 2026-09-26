@@ -1,6 +1,6 @@
-import { api } from "./api.js?v=1.6.3";
-import { store } from "./store.js?v=1.6.3";
-import { ui, icons } from "./ui.js?v=1.6.3";
+import { api } from "./api.js?v=1.6.4";
+import { store } from "./store.js?v=1.6.4";
+import { ui, icons } from "./ui.js?v=1.6.4";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
