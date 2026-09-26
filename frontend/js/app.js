@@ -1,10 +1,14 @@
-import { api } from "./api.js?v=1.5.4";
-import { store } from "./store.js?v=1.5.4";
-import { ui, icons } from "./ui.js?v=1.5.4";
+import { api } from "./api.js?v=1.5.5";
+import { store } from "./store.js?v=1.5.5";
+import { ui, icons } from "./ui.js?v=1.5.5";
 
 document.addEventListener("DOMContentLoaded", () => {
   // Elements
   const composerTextarea = document.getElementById("composer-textarea");
+  const composerInput = document.getElementById("composer-input");
+  const composerChipsWrap = document.getElementById("composer-chips-wrap");
+  const inputComposer = document.getElementById("input-composer");
+  const composerTray = document.getElementById("composer-tray");
   const linkCounterChip = document.getElementById("link-counter-chip");
   const btnPaste = document.getElementById("btn-paste-clipboard");
   const btnClearComposer = document.getElementById("btn-clear-composer");
@@ -199,40 +203,66 @@ document.addEventListener("DOMContentLoaded", () => {
 
   setupCustomQualitySelect();
 
-  // Track live URLs in textarea
-  const updateDetectedUrls = (syncPreview = false) => {
-    const text = composerTextarea.value;
-    const urls = ui.extractUrls(text);
-    const count = urls.length;
-    const hasPlaylist = urls.some(
+  // Active URLs state for composer tray
+  let activeUrls = [];
+
+  // Renders rectangular chips in the composer tray
+  const renderChips = () => {
+    if (!composerChipsWrap) return;
+    ui.renderChips(composerChipsWrap, activeUrls);
+  };
+
+  // Synchronize active URLs state with UI, counters, and hidden textarea
+  const syncUrlsToUI = (syncPreview = false) => {
+    const count = activeUrls.length;
+    const hasPlaylist = activeUrls.some(
       (u) => u.includes("playlist?list=") || u.includes("&list=") || u.includes("list=PL")
     );
 
-    if (btnClearComposer) {
-      btnClearComposer.style.display = text.trim().length > 0 ? "inline-flex" : "none";
+    // Sync hidden textarea for compatibility
+    if (composerTextarea) {
+      composerTextarea.value = activeUrls.join("\n");
     }
 
-    if (count > 0) {
-      if (hasPlaylist) {
-        linkCounterChip.innerHTML = `<span style="color:var(--accent-amber); font-weight:600;">🎵 Playlist</span> &bull; ${count} ${count === 1 ? "enlace" : "enlaces"}`;
+    // Toggle clear composer button
+    const hasInputText = composerInput && composerInput.value.trim().length > 0;
+    if (btnClearComposer) {
+      btnClearComposer.style.display = (count > 0 || hasInputText) ? "inline-flex" : "none";
+    }
+
+    // Update input placeholder based on tray contents
+    if (composerInput) {
+      composerInput.placeholder = count > 0
+        ? "+ Agregar otro enlace (o pega aquí)..."
+        : "Pega aquí tus enlaces (uno por línea o separados por espacio) o escribe y presiona Enter";
+    }
+
+    // Update link counter chip
+    if (linkCounterChip) {
+      if (count > 0) {
+        if (hasPlaylist) {
+          linkCounterChip.innerHTML = `<span style="color:var(--accent-amber); font-weight:600;">🎵 Playlist</span> &bull; ${count} ${count === 1 ? "enlace" : "enlaces"}`;
+        } else {
+          linkCounterChip.textContent = `${count} ${count === 1 ? "enlace" : "enlaces"}`;
+        }
+        linkCounterChip.classList.add("has-links");
       } else {
-        linkCounterChip.textContent = `${count} ${count === 1 ? "enlace" : "enlaces"}`;
+        linkCounterChip.textContent = "0 enlaces";
+        linkCounterChip.classList.remove("has-links");
       }
-      linkCounterChip.classList.add("has-links");
-    } else {
-      linkCounterChip.textContent = "0 enlaces";
-      linkCounterChip.classList.remove("has-links");
     }
 
     // Synchronize preview in real time if requested
     if (syncPreview) {
-      if (urls.length === 0) {
-        store.clearPreview();
+      if (count === 0) {
+        dismissPreviewSection(() => {
+          store.clearPreview();
+        });
       } else {
         const previewItems = store.getPreviewItems();
         if (previewItems.length > 0) {
           for (const item of previewItems) {
-            const stillPresent = ui.itemMatchesUrlList(item, urls);
+            const stillPresent = ui.itemMatchesUrlList(item, activeUrls);
             if (!stillPresent) {
               store.removePreviewItem(item.id);
             }
@@ -240,35 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
-
-    return urls;
   };
-
-  let inputDebounce = null;
-  composerTextarea.addEventListener("input", () => {
-    updateDetectedUrls(true);
-
-    if (inputDebounce) clearTimeout(inputDebounce);
-    inputDebounce = setTimeout(() => {
-      const urls = updateDetectedUrls(false);
-      if (urls.length > 0 && !isPreviewLoading) {
-        const currentPreviewUrls = store.getPreviewItems().map((i) => i.url);
-        const hasNewUrls = urls.some((u) => !currentPreviewUrls.some((pu) => ui.urlsMatch(u, pu)));
-        if (hasNewUrls) {
-          handlePreview(urls);
-        }
-      }
-    }, 600);
-  });
-
-  // Keyboard shortcut: Ctrl+Enter or Cmd+Enter to preview immediately
-  composerTextarea.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      const urls = updateDetectedUrls(false);
-      if (urls.length > 0) handlePreview(urls);
-    }
-  });
 
   // Helper to fetch preview and stage items without downloading yet
   let isPreviewLoading = false;
@@ -286,7 +288,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await api.getPreview(urls);
       if (res.items && res.items.length > 0) {
         store.setPreviewItems(res.items);
-        // NOTE: The link(s) stay in composerTextarea until the download is actually performed
         ui.showToast(
           `Se ${res.count === 1 ? "preparó 1 pista" : "prepararon " + res.count + " pistas"} en la lista inferior.`,
           "success"
@@ -296,43 +297,66 @@ document.addEventListener("DOMContentLoaded", () => {
       ui.showToast(err.message, "error");
     } finally {
       isPreviewLoading = false;
-      updateDetectedUrls(false);
+      syncUrlsToUI(false);
     }
   };
 
-  // Auto-detect when pasting in textarea
-  let pasteTimeout = null;
-  composerTextarea.addEventListener("paste", () => {
-    if (pasteTimeout) clearTimeout(pasteTimeout);
-    pasteTimeout = setTimeout(() => {
-      const urls = updateDetectedUrls(false);
-      if (urls.length > 0) {
-        handlePreview(urls);
-      }
-    }, 250);
-  });
+  // Adds URLs to tray as rectangular chips
+  const addUrls = (newUrls, triggerPreview = true) => {
+    if (!newUrls || newUrls.length === 0) return 0;
 
-  // Paste from clipboard button
-  if (btnPaste && navigator.clipboard) {
-    btnPaste.addEventListener("click", async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          const urls = ui.extractUrls(text);
-          if (urls.length > 0) {
-            handlePreview(urls);
-          } else {
-            composerTextarea.value = text;
-            updateDetectedUrls();
-            composerTextarea.focus();
+    let addedCount = 0;
+    for (const rawUrl of newUrls) {
+      const u = rawUrl.trim();
+      if (!u) continue;
+
+      const exists = activeUrls.some((existing) => ui.urlsMatch(existing, u));
+      if (exists) {
+        // Flash existing chip in tray
+        if (composerChipsWrap) {
+          const chips = Array.from(composerChipsWrap.querySelectorAll(".composer-chip"));
+          const chipEl = chips.find((el) => ui.urlsMatch(el.dataset.url, u));
+          if (chipEl) {
+            chipEl.classList.remove("is-duplicate-flash");
+            void chipEl.offsetWidth; // Force reflow
+            chipEl.classList.add("is-duplicate-flash");
           }
         }
-      } catch (err) {
-        console.warn("Clipboard access denied or unavailable", err);
-        composerTextarea.focus();
+        ui.showToast("Este enlace ya está en la bandeja", "info");
+      } else {
+        activeUrls.push(u);
+        addedCount++;
       }
-    });
-  }
+    }
+
+    if (addedCount > 0) {
+      renderChips();
+      syncUrlsToUI(false);
+      if (triggerPreview) {
+        handlePreview(activeUrls);
+      }
+    }
+
+    return addedCount;
+  };
+
+  // Removes a single URL and its rectangular chip completely
+  const removeUrl = (urlToRemove) => {
+    if (composerChipsWrap) {
+      const chips = Array.from(composerChipsWrap.querySelectorAll(".composer-chip"));
+      const chipEl = chips.find((el) => ui.urlsMatch(el.dataset.url, urlToRemove));
+      if (chipEl) {
+        chipEl.classList.add("is-removing");
+      }
+    }
+
+    setTimeout(() => {
+      activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, urlToRemove));
+      renderChips();
+      syncUrlsToUI(true);
+      ui.showToast("Enlace eliminado de la bandeja", "info");
+    }, 140);
+  };
 
   // Helper to smoothly animate and dismiss the preview section
   const dismissPreviewSection = (callback) => {
@@ -349,26 +373,164 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 240);
   };
 
-  // Clear textarea button
+  // Clears all chips and input from the tray completely
+  const clearTray = () => {
+    activeUrls = [];
+    if (composerInput) composerInput.value = "";
+    renderChips();
+    syncUrlsToUI(false);
+    dismissPreviewSection(() => {
+      store.clearPreview();
+    });
+  };
+
+  // Click on 'X' button to remove link chip completely
+  if (composerChipsWrap) {
+    composerChipsWrap.addEventListener("click", (e) => {
+      const removeBtn = e.target.closest(".composer-chip-remove");
+      if (removeBtn) {
+        e.stopPropagation();
+        const url = removeBtn.dataset.url;
+        if (url) {
+          removeUrl(url);
+        }
+      }
+    });
+  }
+
+  // Click anywhere in composer tray focuses input
+  if (composerTray) {
+    composerTray.addEventListener("click", (e) => {
+      if (!e.target.closest(".composer-chip") && composerInput) {
+        composerInput.focus();
+      }
+    });
+  }
+
+  // Input typing and key shortcuts
+  if (composerInput) {
+    composerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const val = composerInput.value.trim();
+        if (val) {
+          const urls = ui.extractUrls(val);
+          if (urls.length > 0) {
+            addUrls(urls, true);
+            composerInput.value = "";
+          } else {
+            // Animate shake and feedback if not a valid URL
+            composerInput.classList.add("input-shake");
+            setTimeout(() => composerInput.classList.remove("input-shake"), 350);
+            ui.showToast("Ingresa un enlace válido (ej. https://...)", "error");
+          }
+        } else if (activeUrls.length > 0) {
+          handlePreview(activeUrls);
+        }
+      } else if (e.key === " " || e.key === ",") {
+        const val = composerInput.value.trim();
+        if (val) {
+          const urls = ui.extractUrls(val);
+          if (urls.length > 0) {
+            e.preventDefault();
+            addUrls(urls, true);
+            composerInput.value = "";
+          }
+        }
+      } else if (e.key === "Backspace" && composerInput.value === "" && activeUrls.length > 0) {
+        // Backspace on empty input deletes the last rectangular chip
+        const lastUrl = activeUrls[activeUrls.length - 1];
+        removeUrl(lastUrl);
+      }
+    });
+
+    composerInput.addEventListener("input", () => {
+      if (btnClearComposer) {
+        const hasText = composerInput.value.trim().length > 0;
+        btnClearComposer.style.display = (activeUrls.length > 0 || hasText) ? "inline-flex" : "none";
+      }
+    });
+
+    composerInput.addEventListener("blur", () => {
+      const val = composerInput.value.trim();
+      if (val) {
+        const urls = ui.extractUrls(val);
+        if (urls.length > 0) {
+          addUrls(urls, true);
+          composerInput.value = "";
+        }
+      }
+    });
+
+    composerInput.addEventListener("paste", (e) => {
+      const pasted = (e.clipboardData || window.clipboardData)?.getData("text") || "";
+      if (pasted) {
+        const urls = ui.extractUrls(pasted);
+        if (urls.length > 0) {
+          e.preventDefault();
+          addUrls(urls, true);
+          composerInput.value = "";
+        }
+      }
+    });
+  }
+
+  // Drag and drop onto composer tray
+  if (inputComposer) {
+    inputComposer.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      inputComposer.classList.add("dragover");
+    });
+    inputComposer.addEventListener("dragleave", () => {
+      inputComposer.classList.remove("dragover");
+    });
+    inputComposer.addEventListener("drop", (e) => {
+      e.preventDefault();
+      inputComposer.classList.remove("dragover");
+      const text = e.dataTransfer?.getData("text") || "";
+      if (text) {
+        const urls = ui.extractUrls(text);
+        if (urls.length > 0) {
+          addUrls(urls, true);
+        }
+      }
+    });
+  }
+
+  // Paste from clipboard button
+  if (btnPaste && navigator.clipboard) {
+    btnPaste.addEventListener("click", async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const urls = ui.extractUrls(text);
+          if (urls.length > 0) {
+            addUrls(urls, true);
+          } else {
+            composerInput.value = text;
+            composerInput.focus();
+            if (btnClearComposer) btnClearComposer.style.display = "inline-flex";
+          }
+        }
+      } catch (err) {
+        console.warn("Clipboard access denied or unavailable", err);
+        if (composerInput) composerInput.focus();
+      }
+    });
+  }
+
+  // Clear composer button
   if (btnClearComposer) {
     btnClearComposer.addEventListener("click", () => {
-      composerTextarea.value = "";
-      updateDetectedUrls(false);
-      dismissPreviewSection(() => {
-        store.clearPreview();
-      });
-      composerTextarea.focus();
+      clearTray();
+      if (composerInput) composerInput.focus();
     });
   }
 
   // Clear preview list
   if (btnClearPreview) {
     btnClearPreview.addEventListener("click", () => {
-      composerTextarea.value = "";
-      updateDetectedUrls(false);
-      dismissPreviewSection(() => {
-        store.clearPreview();
-      });
+      clearTray();
       ui.showToast("Lista de preparación vaciada", "info");
     });
   }
@@ -385,16 +547,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const format = currentFormat;
       const formatUpper = format.toUpperCase();
 
-      // 1. Instantly clear textarea and URL chips
-      composerTextarea.value = "";
-      updateDetectedUrls(false);
+      // 1. Instantly clear tray and chips
+      clearTray();
 
-      // 2. Instantly trigger smooth fade-out exit animation
-      dismissPreviewSection(() => {
-        store.clearPreview();
-      });
-
-      // 3. Immediate user feedback toast
+      // 2. Immediate user feedback toast
       const entityLabel = format === "mp4"
         ? (count === 1 ? "video" : "videos")
         : (count === 1 ? "canción" : "canciones");
@@ -403,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "success"
       );
 
-      // 4. Send background download request
+      // 3. Send background download request
       api.addDownloads(urls, quality, format).catch((err) => {
         ui.showToast(err.message, "error");
       });
@@ -420,31 +576,25 @@ document.addEventListener("DOMContentLoaded", () => {
         const itemToRemove = items.find((i) => i.id === id);
 
         if (items.length <= 1) {
-          composerTextarea.value = "";
-          updateDetectedUrls(false);
-          dismissPreviewSection(() => {
-            store.removePreviewItem(id);
-          });
+          clearTray();
           return;
         }
 
         store.removePreviewItem(id);
 
-        if (itemToRemove && composerTextarea.value) {
+        if (itemToRemove && activeUrls.length > 0) {
           if (itemToRemove.playlist_id) {
             const remaining = store.getPreviewItems();
             const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === itemToRemove.playlist_id);
             if (!stillHasSamePlaylist) {
-              const currentUrls = ui.extractUrls(composerTextarea.value);
-              const remainingUrls = currentUrls.filter((u) => ui.extractPlaylistId(u) !== itemToRemove.playlist_id);
-              composerTextarea.value = remainingUrls.join("\n");
-              updateDetectedUrls(false);
+              activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== itemToRemove.playlist_id);
+              renderChips();
+              syncUrlsToUI(false);
             }
           } else {
-            const currentUrls = ui.extractUrls(composerTextarea.value);
-            const remainingUrls = currentUrls.filter((u) => !ui.urlsMatch(u, itemToRemove.url));
-            composerTextarea.value = remainingUrls.join("\n");
-            updateDetectedUrls(false);
+            activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, itemToRemove.url));
+            renderChips();
+            syncUrlsToUI(false);
           }
         }
         return;
@@ -462,31 +612,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
           const willBeEmpty = items.length <= 1;
           if (willBeEmpty) {
-            composerTextarea.value = "";
-            updateDetectedUrls(false);
-            dismissPreviewSection(() => {
-              store.removePreviewItem(id);
-            });
+            clearTray();
           } else {
             store.removePreviewItem(id);
 
-            // Remove downloaded URL from textarea if no more items from that source/playlist
-            if (composerTextarea.value) {
-              if (target.playlist_id) {
-                const remaining = store.getPreviewItems();
-                const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === target.playlist_id);
-                if (!stillHasSamePlaylist) {
-                  const currentUrls = ui.extractUrls(composerTextarea.value);
-                  const remainingUrls = currentUrls.filter((u) => ui.extractPlaylistId(u) !== target.playlist_id);
-                  composerTextarea.value = remainingUrls.join("\n");
-                  updateDetectedUrls(false);
-                }
-              } else {
-                const currentUrls = ui.extractUrls(composerTextarea.value);
-                const remainingUrls = currentUrls.filter((u) => !ui.urlsMatch(u, target.url));
-                composerTextarea.value = remainingUrls.join("\n");
-                updateDetectedUrls(false);
+            if (target.playlist_id) {
+              const remaining = store.getPreviewItems();
+              const stillHasSamePlaylist = remaining.some((i) => i.playlist_id === target.playlist_id);
+              if (!stillHasSamePlaylist) {
+                activeUrls = activeUrls.filter((u) => ui.extractPlaylistId(u) !== target.playlist_id);
+                renderChips();
+                syncUrlsToUI(false);
               }
+            } else {
+              activeUrls = activeUrls.filter((u) => !ui.urlsMatch(u, target.url));
+              renderChips();
+              syncUrlsToUI(false);
             }
           }
 

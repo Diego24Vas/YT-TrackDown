@@ -11,10 +11,10 @@
   <link rel="shortcut icon" href="favicon.ico?v=1.5.4">
   
   <!-- Modular Stylesheets -->
-  <link rel="stylesheet" href="css/variables.css?v=1.5.4">
-  <link rel="stylesheet" href="css/base.css?v=1.5.4">
-  <link rel="stylesheet" href="css/components.css?v=1.5.4">
-  <link rel="stylesheet" href="css/layout.css?v=1.5.4">
+  <link rel="stylesheet" href="css/variables.css?v=1.5.5">
+  <link rel="stylesheet" href="css/base.css?v=1.5.5">
+  <link rel="stylesheet" href="css/components.css?v=1.5.5">
+  <link rel="stylesheet" href="css/layout.css?v=1.5.5">
 </head>
 <body>
 
@@ -77,12 +77,29 @@
       </div>
 
       <!-- Multi-link Composer -->
-      <div class="input-composer">
+      <div class="input-composer" id="input-composer">
+        <div class="composer-tray" id="composer-tray">
+          <div class="composer-chips-wrap" id="composer-chips-wrap" aria-live="polite">
+            <!-- Dynamic rectangular link chips will be rendered here -->
+          </div>
+          <div class="composer-input-row">
+            <input 
+              type="text" 
+              id="composer-input" 
+              class="composer-input" 
+              placeholder="Pega aquí tus enlaces (uno por línea o separados por espacio) o escribe y presiona Enter"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+        </div>
+
         <textarea 
           id="composer-textarea" 
-          class="composer-textarea" 
-          placeholder="Pega aquí tus enlaces (uno por línea o separados por espacio)"
-          spellcheck="false"
+          class="composer-textarea sr-only" 
+          aria-hidden="true"
+          style="display: none;"
+          tabindex="-1"
         ></textarea>
 
         <div class="composer-footer">
@@ -377,6 +394,6 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Main Script -->
-  <script type="module" src="js/app.js?v=1.5.4"></script>
+  <script type="module" src="js/app.js?v=1.5.5"></script>
 </body>
 </html>

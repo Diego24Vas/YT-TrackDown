@@ -129,11 +129,236 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-fast);
 }
 
 .input-composer:focus-within {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 1px var(--accent-primary), var(--shadow-glow);
+}
+
+.input-composer.dragover {
+  border-color: var(--accent-primary);
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+.composer-tray {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 84px;
+  cursor: text;
+}
+
+.composer-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.composer-chips-wrap:empty {
+  display: none;
+}
+
+/* Custom subtle scrollbar */
+.composer-chips-wrap::-webkit-scrollbar {
+  width: 5px;
+}
+.composer-chips-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.composer-chips-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: var(--radius-full);
+}
+
+/* Rectangular link chip with dedicated 'x' delete button on right */
+.composer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.84rem;
+  line-height: 1.35;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  animation: chipAppear 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+  max-width: 100%;
+  user-select: none;
+}
+
+.composer-chip:hover {
+  border-color: rgba(99, 102, 241, 0.45);
+  background-color: var(--bg-surface-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.composer-chip.is-duplicate-flash {
+  animation: chipFlash 0.6s ease-in-out;
+}
+
+@keyframes chipAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes chipFlash {
+  0%, 100% {
+    border-color: var(--border-subtle);
+    background-color: var(--bg-elevated);
+  }
+  50% {
+    border-color: var(--accent-amber);
+    background-color: var(--accent-amber-bg);
+    transform: scale(1.03);
+  }
+}
+
+.composer-chip.is-removing {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  opacity: 0;
+  transform: scale(0.88) translateY(-2px);
+  pointer-events: none;
+}
+
+.composer-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  transition: color var(--transition-fast);
+}
+
+.composer-chip-icon.is-youtube {
+  color: #ef4444; /* YouTube red */
+}
+
+.composer-chip-icon.is-playlist {
+  color: var(--accent-amber);
+}
+
+.composer-chip-icon.is-soundcloud {
+  color: #ff5500;
+}
+
+.composer-chip-icon.is-globe {
+  color: var(--text-muted);
+}
+
+.composer-chip:hover .composer-chip-icon.is-globe {
+  color: var(--accent-cyan);
+}
+
+.composer-chip-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.81rem;
+  color: var(--text-primary);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 600px) {
+  .composer-chip-text {
+    max-width: 440px;
+  }
+}
+
+@media (min-width: 820px) {
+  .composer-chip-text {
+    max-width: 560px;
+  }
+}
+
+.composer-chip-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--accent-amber);
+  background-color: var(--accent-amber-bg);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* 'X' button on the right side of the chip */
+.composer-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.composer-chip-remove:hover {
+  background-color: var(--accent-rose-bg);
+  color: var(--accent-rose);
+  transform: scale(1.15);
+}
+
+.composer-chip-remove:active {
+  transform: scale(0.92);
+}
+
+.composer-input-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+  min-height: 38px;
+}
+
+.composer-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.93rem;
+  line-height: 1.5;
+  font-family: inherit;
+  padding: 4px 0;
+}
+
+.composer-input::placeholder {
+  color: var(--text-muted);
+}
+
+.input-shake {
+  animation: shake 0.35s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
 }
 
 .composer-textarea {

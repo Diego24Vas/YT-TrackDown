@@ -16,6 +16,11 @@ export const icons = {
   soundwave: `<svg class="pulsing" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>`,
   video: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
   externalLink: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  youtube: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+  playlist: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>`,
+  link: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
+  close: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+  globe: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`,
 };
 
 export const ui = {
@@ -35,14 +40,25 @@ export const ui = {
   },
 
   /**
-   * Parses text and extracts valid http/https URLs
+   * Parses text and extracts valid http/https URLs, normalizing YouTube URLs and stripping punctuation
    */
   extractUrls(text) {
     if (!text) return [];
+    // Pre-process: add https:// to bare youtube.com / youtu.be / www.youtube.com domains if missing protocol
+    let processed = text.replace(/(^|[\s,;])((?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s,;"'<>()]+)/gi, "$1https://$2");
+    
     // Match URLs starting with http:// or https://
-    const matches = text.match(/https?:\/\/[^\s,;"'<>()]+/gi) || [];
-    // Deduplicate while preserving order
-    return Array.from(new Set(matches.map((u) => u.trim())));
+    const rawMatches = processed.match(/https?:\/\/[^\s,;"'<>()]+/gi) || [];
+    
+    const cleaned = [];
+    for (let u of rawMatches) {
+      // Strip trailing punctuation like comma, period, bracket, quotes
+      u = u.replace(/[.,;:!?)\]}>"']+$/g, "").trim();
+      if (u && !cleaned.includes(u)) {
+        cleaned.push(u);
+      }
+    }
+    return cleaned;
   },
 
   /**
@@ -444,6 +460,76 @@ export const ui = {
       return;
     }
     container.innerHTML = items.map((i) => this.createPreviewCardHtml(i, currentFormat)).join("");
+  },
+
+  /**
+   * Detects platform from URL and returns appropriate icon, CSS class, and optional badge.
+   * If the platform/logo is not recognized, returns the classic web globe icon ("el tipico mundito").
+   */
+  getUrlPlatformInfo(url) {
+    if (!url) {
+      return { icon: icons.globe, iconClass: "is-globe", badge: "" };
+    }
+
+    let hostname = "";
+    try {
+      hostname = new URL(url).hostname.toLowerCase();
+    } catch {
+      hostname = url.toLowerCase();
+    }
+
+    // YouTube (Video or Playlist)
+    const isYouTube = hostname.includes("youtube.com") || hostname.includes("youtu.be");
+    if (isYouTube) {
+      const isPlaylist = url.includes("playlist?list=") || url.includes("&list=") || url.includes("list=PL");
+      if (isPlaylist) {
+        return { icon: icons.playlist, iconClass: "is-playlist", badge: "Playlist" };
+      }
+      return { icon: icons.youtube, iconClass: "is-youtube", badge: "" };
+    }
+
+    // SoundCloud
+    if (hostname.includes("soundcloud.com")) {
+      return { icon: icons.soundwave, iconClass: "is-soundcloud", badge: "SoundCloud" };
+    }
+
+    // Unrecognized / Generic page: classic globe icon ("el tipico mundito")
+    return { icon: icons.globe, iconClass: "is-globe", badge: "" };
+  },
+
+  /**
+   * Builds single rectangular link chip HTML string with remove button on right
+   */
+  createChipHtml(url) {
+    const info = this.getUrlPlatformInfo(url);
+    const escapedUrl = url.replace(/"/g, "&quot;");
+
+    return `
+      <div class="composer-chip" data-url="${escapedUrl}" title="${escapedUrl}">
+        <span class="composer-chip-icon ${info.iconClass}">
+          ${info.icon}
+        </span>
+        <span class="composer-chip-text" title="${escapedUrl}">
+          ${escapedUrl}
+        </span>
+        ${info.badge ? `<span class="composer-chip-badge">${info.badge}</span>` : ""}
+        <button type="button" class="composer-chip-remove" data-url="${escapedUrl}" title="Eliminar este enlace completo" aria-label="Eliminar enlace completo">
+          ${icons.close}
+        </button>
+      </div>
+    `;
+  },
+
+  /**
+   * Renders rectangular chips in the composer tray
+   */
+  renderChips(container, urls) {
+    if (!container) return;
+    if (!urls || urls.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+    container.innerHTML = urls.map((u) => this.createChipHtml(u)).join("");
   },
 
   /**

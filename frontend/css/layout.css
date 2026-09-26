@@ -258,8 +258,12 @@
     gap: 10px;
   }
 
-  .composer-textarea {
+  .composer-textarea,
+  .composer-input {
     font-size: 16px; /* Evita zoom automático en Safari iOS */
+  }
+
+  .composer-textarea {
     min-height: 76px;
     line-height: 1.45;
   }
