@@ -1158,6 +1158,11 @@
   flex-shrink: 0;
 }
 
+.toast-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
 .toast.toast-success .toast-icon {
   color: var(--accent-emerald);
 }
@@ -1168,6 +1173,17 @@
 
 .toast.toast-info .toast-icon {
   color: var(--accent-cyan);
+}
+
+/* Format specific toast icons */
+.toast.toast-format-mp4.toast-info .toast-icon,
+.toast.toast-format-mp4:not(.toast-error):not(.toast-success) .toast-icon {
+  color: #38bdf8;
+}
+
+.toast.toast-format-mp3.toast-info .toast-icon,
+.toast.toast-format-mp3:not(.toast-error):not(.toast-success) .toast-icon {
+  color: #c084fc;
 }
 
 @keyframes toast-in {

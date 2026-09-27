@@ -112,6 +112,10 @@ class Store {
     }
   }
 
+  getItem(id) {
+    return this.items.get(id);
+  }
+
   removeItem(id) {
     this.items.delete(id);
     this.notify("item_removed", id);

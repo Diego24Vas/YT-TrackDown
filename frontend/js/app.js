@@ -196,6 +196,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const switchFormat = (format) => {
       if (currentFormat === format) return;
       currentFormat = format;
+      ui.currentFormat = format;
 
       // Synchronize top mode tabs
       if (mainTabMp3) mainTabMp3.classList.toggle("is-active", format === "mp3");
@@ -219,6 +220,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } else if (isPreviewLoading && previewList) {
         ui.renderPreviewLoading(previewList, activeUrls.length, currentFormat);
       }
+
+      // If queue is empty, update the empty state icon to match current format
+      if (store.getFilteredItems().length === 0 && store.getPendingQueueCount() === 0 && queueList) {
+        ui.renderList(queueList, store.getFilteredItems(), 0, currentFormat);
+      }
     };
 
     if (mainTabMp3) mainTabMp3.addEventListener("click", () => switchFormat("mp3"));
@@ -229,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   setupCustomQualitySelect();
+  ui.currentFormat = currentFormat;
 
   // Active URLs state for composer tray
   let activeUrls = [];
@@ -412,7 +419,8 @@ document.addEventListener("DOMContentLoaded", () => {
           : (res.count === 1 ? "pista" : "pistas");
         ui.showToast(
           `Se ${res.count === 1 ? "preparó 1 " + entityLabel : "prepararon " + res.count + " " + entityLabel} en la lista inferior.`,
-          "success"
+          "info",
+          currentFormat
         );
       } else {
         if (previewList) {
@@ -770,7 +778,8 @@ document.addEventListener("DOMContentLoaded", () => {
         : (count === 1 ? "canción" : "canciones");
       ui.showToast(
         `Iniciando descarga de ${count} ${entityLabel} en formato ${formatUpper}.`,
-        "success"
+        "info",
+        format
       );
 
       // 4. Send background download request passing pre-resolved preview metadata
@@ -893,7 +902,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
 
           api.addDownloads([target.url], quality, format, [target]).then(() => {
-            ui.showToast(`Descargando (${format.toUpperCase()}): ${target.title}`, "success");
+            ui.showToast(`Descargando (${format.toUpperCase()}): ${target.title}`, "info", format);
             setTimeout(() => {
               if (store.getPendingQueueCount() > 0) {
                 store.clearPendingQueue();
@@ -926,9 +935,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnDelete) {
       const id = btnDelete.dataset.id;
       try {
+        const targetItem = (store.getItem ? store.getItem(id) : null) || store.items?.get(id);
+        const itemFormat = targetItem?.format || currentFormat;
         await api.deleteDownload(id);
         store.removeItem(id);
-        ui.showToast("Elemento eliminado", "info");
+        ui.showToast(itemFormat === "mp4" ? "Video eliminado" : "Pista eliminada", "info", itemFormat);
       } catch (err) {
         ui.showToast(err.message, "error");
       }
@@ -939,9 +950,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnRetry) {
       const id = btnRetry.dataset.id;
       try {
+        const targetItem = (store.getItem ? store.getItem(id) : null) || store.items?.get(id);
+        const itemFormat = targetItem?.format || currentFormat;
         btnRetry.setAttribute("disabled", "true");
         await api.retryDownload(id);
-        ui.showToast("Reanudando descarga...", "info");
+        ui.showToast(itemFormat === "mp4" ? "Reanudando descarga de video..." : "Reanudando descarga de audio...", "info", itemFormat);
       } catch (err) {
         ui.showToast(err.message, "error");
       }
@@ -952,7 +965,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Download all completed as ZIP
   if (btnDownloadZip) {
     btnDownloadZip.addEventListener("click", () => {
-      ui.showToast("Preparando archivo ZIP comprimido...", "info");
+      ui.showToast("Preparando archivo ZIP comprimido...", "info", { icon: icons.zip });
       window.location.href = api.getZipUrl();
     });
   }
@@ -998,9 +1011,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isEnabled) return null;
 
     try {
+      const isVideo = options.format === "mp4" || (!options.format && currentFormat === "mp4");
+      const defaultIcon = isVideo ? "/favicon-mp4.png" : "/favicon.png";
       const n = new Notification(title, {
-        icon: "/favicon.png",
-        badge: "/favicon.png",
+        icon: options.icon || defaultIcon,
+        badge: options.badge || defaultIcon,
         silent: false,
         ...options,
       });
@@ -1105,6 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let prevDownloadingCount = 0;
   let batchCompletedInSession = 0;
   let lastCompletedTitle = "";
+  let lastCompletedFormat = "mp3";
 
   store.subscribe((event, payload) => {
     const stats = store.getStats();
@@ -1115,6 +1131,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event === "item_updated" && payload && payload.status === "completed") {
       batchCompletedInSession++;
       lastCompletedTitle = payload.title || (payload.format === "mp4" ? "Video descargado" : "Pista de audio descargada");
+      lastCompletedFormat = payload.format || currentFormat;
     }
 
     // Detect when all active downloading tasks have finished
@@ -1124,15 +1141,20 @@ document.addEventListener("DOMContentLoaded", () => {
           sendDesktopNotification("¡Descarga completada!", {
             body: lastCompletedTitle ? `"${lastCompletedTitle}" está lista para guardar.` : "Tu descarga ha finalizado con éxito.",
             tag: "ytdown-complete",
+            format: lastCompletedFormat,
           });
+          ui.showToast(lastCompletedTitle ? `Descarga completada: ${lastCompletedTitle}` : "Descarga completada con éxito", "info", lastCompletedFormat);
         } else {
           sendDesktopNotification("¡Descargas completadas!", {
             body: `Se completaron ${batchCompletedInSession} descargas con éxito en segundo plano.`,
             tag: "ytdown-batch-complete",
+            format: lastCompletedFormat,
           });
+          ui.showToast(`Se completaron ${batchCompletedInSession} descargas con éxito`, "info", lastCompletedFormat);
         }
         batchCompletedInSession = 0;
         lastCompletedTitle = "";
+        lastCompletedFormat = currentFormat;
       }
     }
     prevDownloadingCount = stats.downloading;
