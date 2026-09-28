@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.app.core.config import settings
 from backend.app.api.routes import router as api_router
 from backend.app.api.sse import sse_router
+from backend.app.api.stream_routes import stream_router
 from backend.app.services.queue_service import queue_service
 
 # Setup logging
@@ -59,6 +60,7 @@ async def add_no_cache_headers(request, call_next):
 # Register API Routers
 app.include_router(api_router)
 app.include_router(sse_router)
+app.include_router(stream_router)
 
 # Mount Frontend static directory
 if settings.FRONTEND_DIR.is_dir():

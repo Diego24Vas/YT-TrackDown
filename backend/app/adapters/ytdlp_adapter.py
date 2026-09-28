@@ -7,6 +7,12 @@ from pathlib import Path
 from datetime import datetime
 import yt_dlp
 
+try:
+    from yt_dlp.networking.impersonate import ImpersonateTarget
+    IMPERSONATE_CHROME = ImpersonateTarget.from_str("chrome")
+except Exception:
+    IMPERSONATE_CHROME = None
+
 from backend.app.core.config import settings
 from backend.app.adapters.storage_adapter import storage_adapter
 
@@ -40,6 +46,10 @@ class YtDlpAdapter:
         active_cookies = settings.get_active_cookies_file()
         if active_cookies:
             opts["cookiefile"] = str(active_cookies)
+
+        if IMPERSONATE_CHROME:
+            opts["impersonate"] = IMPERSONATE_CHROME
+
         return opts
 
     def expand_url(self, url: str) -> list[Dict[str, Any]]:
@@ -63,6 +73,9 @@ class YtDlpAdapter:
         active_cookies = settings.get_active_cookies_file()
         if active_cookies:
             flat_opts["cookiefile"] = str(active_cookies)
+
+        if IMPERSONATE_CHROME:
+            flat_opts["impersonate"] = IMPERSONATE_CHROME
         
         try:
             with yt_dlp.YoutubeDL(flat_opts) as ydl:
@@ -320,12 +333,14 @@ class YtDlpAdapter:
             format_selector = (
                 f"bestvideo[height<={h}][ext=mp4]+bestaudio[ext=m4a]/"
                 f"bestvideo[height<={h}]+bestaudio/"
+                f"bestvideo*[height<={h}]/"
                 f"best[height<={h}]/best"
             )
         else:
             format_selector = (
                 "bestvideo[ext=mp4]+bestaudio[ext=m4a]/"
                 "bestvideo+bestaudio/"
+                "bestvideo*/"
                 "best"
             )
 

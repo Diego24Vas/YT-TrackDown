@@ -1,0 +1,488 @@
+/* ==========================================================================
+   STREAM / M3U8 DOWNLOADER MODULE (Isolated Styles)
+   ========================================================================== */
+
+/* Top Mode Navigation Switcher */
+.app-mode-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin: var(--space-md) auto var(--space-lg);
+  padding: 4px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  max-width: 440px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mode-nav-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.mode-nav-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mode-nav-btn.is-active {
+  color: #fff;
+  background: var(--bg-elevated);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.mode-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent-cyan);
+  background: var(--accent-cyan-bg);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: var(--radius-full);
+}
+
+/* Stream Section Container */
+.stream-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  animation: fadeIn 200ms ease-out;
+}
+
+/* Stream Info Banner */
+.stream-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.stream-banner-icon {
+  flex-shrink: 0;
+  color: var(--accent-cyan);
+  margin-top: 2px;
+}
+
+.stream-banner strong {
+  color: var(--text-primary);
+}
+
+.stream-banner code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  font-family: monospace;
+}
+
+/* Stream Card Panel */
+.stream-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.stream-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.stream-card-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-lg);
+}
+
+/* Form Groups */
+.stream-form-group {
+  margin-bottom: var(--space-md);
+}
+
+.stream-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.stream-label-hint {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: var(--text-muted);
+}
+
+.stream-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stream-input {
+  flex: 1;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  transition: all var(--transition-fast);
+}
+
+.stream-input:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px var(--accent-cyan-bg);
+}
+
+.stream-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-family: monospace;
+  resize: vertical;
+  min-height: 60px;
+  transition: all var(--transition-fast);
+}
+
+.stream-textarea:focus {
+  outline: none;
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px var(--accent-cyan-bg);
+}
+
+/* Grid for options */
+.stream-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+@media (max-width: 640px) {
+  .stream-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* UA Presets row */
+.ua-presets-bar {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.ua-preset-chip {
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ua-preset-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.ua-preset-chip.is-active {
+  background: var(--accent-cyan-bg);
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
+/* Advanced Accordion */
+.stream-advanced-details {
+  margin: var(--space-md) 0;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.stream-advanced-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stream-advanced-summary:hover {
+  color: var(--text-secondary);
+}
+
+.stream-advanced-body {
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Action Buttons Bar */
+.stream-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.btn-cyan {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+  transition: all var(--transition-fast);
+}
+
+.btn-cyan:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  box-shadow: 0 6px 18px rgba(6, 182, 212, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-cyan:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Probe / Verification Result Box */
+.stream-probe-card {
+  margin-top: var(--space-md);
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  animation: fadeIn 200ms ease;
+}
+
+.stream-probe-success {
+  background: var(--accent-emerald-bg);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.stream-probe-error {
+  background: var(--accent-rose-bg);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fb7185;
+}
+
+.stream-probe-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.stream-probe-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
+.stream-probe-details span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Stream Tasks List */
+.stream-tasks-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.stream-task-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.stream-task-card:hover {
+  border-color: var(--border-hover);
+}
+
+.stream-task-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stream-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stream-task-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-cyan);
+  flex-shrink: 0;
+}
+
+.stream-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stream-task-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stream-task-url {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+
+.stream-task-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+}
+
+.badge-stream-downloading {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.badge-stream-converting {
+  background: var(--accent-amber-bg);
+  color: var(--accent-amber);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-stream-completed {
+  background: var(--accent-emerald-bg);
+  color: var(--accent-emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-stream-error {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+/* Progress bar inside task */
+.stream-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.stream-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #06b6d4, #10b981);
+  border-radius: var(--radius-full);
+  transition: width 200ms ease;
+}
+
+.stream-progress-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.stream-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-end;
+}

@@ -50,6 +50,10 @@ class DownloaderService:
             return "Este video es privado. Requiere cookies de una cuenta con permiso de visualización."
         elif "members-only" in err_str.lower() or "join this channel" in err_str.lower():
             return "Este video es exclusivo para miembros del canal de YouTube."
+        elif "HTTP Error 474" in err_str or "474" in err_str:
+            return "Error 474 (Acceso no autorizado por el CDN): El servidor bloqueó la descarga directa. Prueba en la pestaña 'Streams HLS / M3U8' con Referer o cookies."
+        elif "HTTP Error 403" in err_str:
+            return "Error 403 (Forbidden): El servidor denegó la conexión. Si es un stream protegido, usa la pestaña 'Streams HLS / M3U8'."
         return f"Error al procesar: {err_str[:130]}"
 
     async def process_audio_download(
