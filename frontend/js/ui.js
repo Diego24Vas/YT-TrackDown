@@ -14,7 +14,7 @@ export const icons = {
   refresh: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
   zip: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`,
   soundwave: `<svg class="pulsing" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>`,
-  video: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
+  video: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`,
   externalLink: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
   youtube: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
   playlist: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></svg>`,
@@ -26,6 +26,8 @@ export const icons = {
 };
 
 export const ui = {
+  currentFormat: "mp3",
+
   /**
    * Formats bytes into human-readable string (KB, MB, GB)
    */
@@ -114,9 +116,12 @@ export const ui = {
   },
 
   /**
-   * Displays non-intrusive toast alert
+   * Displays non-intrusive toast alert with format-aware and context-aware icons
+   * @param {string} message - Message text
+   * @param {string} type - 'info' | 'success' | 'error'
+   * @param {string|object} options - Format string ('mp4' | 'mp3') or options object { format, icon, useFormatIcon }
    */
-  showToast(message, type = "info") {
+  showToast(message, type = "info", options = {}) {
     let container = document.getElementById("toast-container");
     if (!container) {
       container = document.createElement("div");
@@ -125,12 +130,71 @@ export const ui = {
       document.body.appendChild(container);
     }
 
-    const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
+    // 1. Normalize format & custom icon options
+    let format = null;
+    let customIcon = null;
+    let forceFormatIcon = false;
 
-    let iconHtml = icons.music;
-    if (type === "success") iconHtml = icons.check;
-    if (type === "error") iconHtml = icons.alert;
+    if (typeof options === "string") {
+      format = options.toLowerCase();
+    } else if (options && typeof options === "object") {
+      if (options.format) format = String(options.format).toLowerCase();
+      if (options.icon) customIcon = options.icon;
+      if (options.useFormatIcon) forceFormatIcon = true;
+    }
+
+    // 2. Auto-detect format from message text if not explicitly specified
+    if (!format && message) {
+      const msgLower = String(message).toLowerCase();
+      if (/\bmp4\b|video|videos/.test(msgLower)) {
+        format = "mp4";
+      } else if (/\bmp3\b|audio|pista|pistas|canción|cancion|canciones/.test(msgLower)) {
+        format = "mp3";
+      }
+    }
+
+    // 3. Fallback to active app format from state or DOM
+    if (!format) {
+      if (this.currentFormat) {
+        format = this.currentFormat;
+      } else {
+        const activeTab = document.querySelector(".format-tab-btn.is-active");
+        if (activeTab && activeTab.dataset.format) {
+          format = activeTab.dataset.format.toLowerCase();
+        } else if (document.getElementById("main-tab-mp4")?.classList.contains("is-active")) {
+          format = "mp4";
+        } else {
+          format = "mp3";
+        }
+      }
+    }
+
+    // 4. Resolve icon
+    let iconHtml = null;
+    if (customIcon) {
+      iconHtml = customIcon;
+    } else if (type === "error") {
+      iconHtml = icons.alert;
+    } else if (type === "success" && !forceFormatIcon) {
+      iconHtml = icons.check;
+    } else {
+      // Info or notifications with format icon
+      const msgLower = String(message || "").toLowerCase();
+      if (/zip|comprimido/.test(msgLower)) {
+        iconHtml = icons.zip;
+      } else if (/cookie/.test(msgLower)) {
+        iconHtml = icons.cookie;
+      } else if (/notificaci/.test(msgLower)) {
+        iconHtml = icons.bell;
+      } else if (format === "mp4") {
+        iconHtml = icons.video;
+      } else {
+        iconHtml = icons.music;
+      }
+    }
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type} toast-format-${format}`;
 
     toast.innerHTML = `<span class="toast-icon">${iconHtml}</span><span class="toast-msg">${message}</span>`;
     
@@ -205,9 +269,10 @@ export const ui = {
       ? `<span class="item-size-badge" title="Peso del archivo ${formatLabel}">${item.file_size_str}</span>`
       : "";
 
+    const isFetching = item.status === "fetching_info" || item.status === "queued";
     const thumbHtml = item.thumbnail
       ? `<img src="${item.thumbnail}" alt="" class="item-thumb-img" loading="lazy">`
-      : `<div class="item-thumb-placeholder">${isVideo ? icons.video : icons.music}</div>`;
+      : `<div class="item-thumb-placeholder ${isFetching ? 'skeleton-shimmer' : ''}">${isVideo ? icons.video : icons.music}</div>`;
 
     const durationHtml = item.duration_str
       ? `<span class="item-duration-badge">${item.duration_str}</span>`
@@ -217,6 +282,7 @@ export const ui = {
     if (item.status === "converting") progressFillClass = "converting";
     if (item.status === "completed") progressFillClass = "completed";
     if (item.status === "expired") progressFillClass = "expired";
+    if (item.status === "fetching_info") progressFillClass = "converting skeleton-shimmer";
 
     let actionBtnHtml = "";
     if (item.status === "completed") {
@@ -367,21 +433,40 @@ export const ui = {
   },
 
   /**
-   * Full render of list container
+   * Full render of list container with persistent pending skeletons
    */
-  renderList(container, items) {
-    if (!items || items.length === 0) {
+  renderList(container, items, pendingCount = 0, currentFormat = "mp3") {
+    if (!container) return;
+    this.currentFormat = currentFormat;
+
+    const hasRealItems = items && items.length > 0;
+    const hasPendingSkeletons = pendingCount > 0;
+
+    if (!hasRealItems && !hasPendingSkeletons) {
+      container.querySelectorAll(".item-card-skeleton").forEach((el) => el.remove());
+      const isVideo = currentFormat === "mp4";
       container.innerHTML = `
         <div class="empty-queue">
-          <div class="empty-icon">${icons.music}</div>
-          <div class="empty-title">No hay descargas en la cola</div>
-          <div class="empty-desc">Pega uno o más enlaces de YouTube en el campo superior para comenzar a descargar en formato MP3 o MP4.</div>
+          <div class="empty-icon">${isVideo ? icons.video : icons.music}</div>
+          <div class="empty-title">No hay descargas en esta vista</div>
+          <div class="empty-desc">No se encontraron elementos correspondientes al filtro seleccionado.</div>
         </div>
       `;
       return;
     }
 
-    container.innerHTML = items.map((i) => this.createCardHtml(i)).join("");
+    // Clean up empty queue placeholder if present
+    const emptyQueue = container.querySelector(".empty-queue");
+    if (emptyQueue) emptyQueue.remove();
+
+    // Render real items
+    const realHtml = hasRealItems ? items.map((i) => this.createCardHtml(i)).join("") : "";
+    container.innerHTML = realHtml;
+
+    // Append pending skeleton cards below real items
+    if (hasPendingSkeletons) {
+      this.appendQueueLoading(container, pendingCount, currentFormat);
+    }
   },
 
   /**
@@ -458,6 +543,7 @@ export const ui = {
    */
   renderPreviewList(container, items, currentFormat = "mp3") {
     if (!container) return;
+    this.currentFormat = currentFormat;
     if (!items || items.length === 0) {
       container.innerHTML = "";
       return;
@@ -536,6 +622,62 @@ export const ui = {
   },
 
   /**
+   * Appends skeleton card placeholders to download queue while starting downloads
+   */
+  appendQueueLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    const isVideo = currentFormat === "mp4";
+    const countClamped = Math.min(Math.max(count, 1), 20);
+
+    // Remove empty-queue state if present so skeleton cards display cleanly
+    const emptyQueue = container.querySelector(".empty-queue");
+    if (emptyQueue) emptyQueue.remove();
+
+    let skeletonsHtml = "";
+    for (let i = 0; i < countClamped; i++) {
+      skeletonsHtml += `
+        <div class="item-card item-card-skeleton" aria-hidden="true">
+          <div class="item-thumb-box skeleton-shimmer">
+            <div class="skeleton-thumb-icon">${isVideo ? icons.video : icons.music}</div>
+          </div>
+          <div class="item-content">
+            <div class="item-header-row">
+              <div style="min-width:0; flex:1;">
+                <div class="skeleton-shimmer skeleton-line skeleton-line-title"></div>
+                <div class="skeleton-shimmer skeleton-line skeleton-line-meta"></div>
+              </div>
+              <div class="item-status-wrapper">
+                <div class="skeleton-shimmer skeleton-badge-placeholder"></div>
+              </div>
+            </div>
+            <div class="progress-wrap" style="margin-top: 8px;">
+              <div class="skeleton-shimmer skeleton-progress-placeholder"></div>
+              <div class="progress-info-row tabular" style="margin-top: 4px;">
+                <div class="skeleton-shimmer skeleton-line" style="width: 25%; height: 10px;"></div>
+                <div class="skeleton-shimmer skeleton-line" style="width: 20%; height: 10px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="item-actions">
+            <div class="skeleton-shimmer skeleton-btn-placeholder" style="width: 32px; height: 32px; border-radius: var(--radius-md);"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    container.insertAdjacentHTML("beforeend", skeletonsHtml);
+  },
+
+  /**
+   * Renders skeleton placeholders in download queue
+   */
+  renderQueueLoading(container, count = 1, currentFormat = "mp3") {
+    if (!container) return;
+    container.innerHTML = "";
+    this.appendQueueLoading(container, count, currentFormat);
+  },
+
+  /**
    * Detects platform from URL and returns appropriate icon, CSS class, and optional badge.
    * If the platform/logo is not recognized, returns the classic web globe icon ("el tipico mundito").
    */
@@ -564,6 +706,12 @@ export const ui = {
     // SoundCloud
     if (hostname.includes("soundcloud.com")) {
       return { icon: icons.soundwave, iconClass: "is-soundcloud", badge: "SoundCloud" };
+    }
+
+    // HLS / M3U8 Stream
+    const urlLower = url.toLowerCase();
+    if (urlLower.includes(".m3u8") || urlLower.includes("/hls/") || hostname.includes("m3u8")) {
+      return { icon: icons.video, iconClass: "is-stream", badge: "HLS" };
     }
 
     // Unrecognized / Generic page: classic globe icon ("el tipico mundito")
