@@ -327,8 +327,8 @@ class StreamDownloader {
       : "";
 
     const hintHtml = (!item.probe?.success && (item.probe?.status_code === 403 || item.probe?.status_code === 474))
-      ? `<div class="probe-hint" style="margin-top: 8px; font-size: 0.78rem; color: var(--accent-amber);">
-          💡 <strong>Aviso 403:</strong> El servidor requiere autenticación o validación de origen. Asegúrate de que el campo <code>Referer</code> contenga la web original del reproductor antes de descargar.
+      ? `<div class="probe-hint" style="margin-top: 8px; font-size: 0.78rem; color: var(--accent-amber); display: inline-flex; align-items: center; gap: 6px;">
+          ${icons.alert} <span><strong>Aviso 403:</strong> El servidor requiere autenticación o validación de origen. Asegúrate de que el campo <code>Referer</code> contenga la web original del reproductor antes de descargar.</span>
          </div>`
       : "";
 

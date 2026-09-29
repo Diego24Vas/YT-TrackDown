@@ -19,3 +19,4 @@ services:
       - ./downloads:/app/downloads:z
       - ./cookies:/app/cookies:z
       - ./frontend:/app/frontend:ro,z
+      - ./backend:/app/backend:ro,z

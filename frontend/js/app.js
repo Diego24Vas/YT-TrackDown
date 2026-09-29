@@ -1366,12 +1366,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarDrawer = document.getElementById("sidebar-drawer");
     const sidebarOptYoutube = document.getElementById("sidebar-opt-youtube");
     const sidebarOptHls = document.getElementById("sidebar-opt-hls");
+    const sidebarOptClips = document.getElementById("sidebar-opt-clips");
     const appModeBadge = document.getElementById("app-mode-badge");
 
     const heroSection = document.getElementById("hero-section");
     const previewSection = document.getElementById("preview-section");
     const queueSection = document.getElementById("queue-section");
     const streamSection = document.getElementById("stream-downloader-section");
+    const clipSection = document.getElementById("clip-downloader-section");
 
     const openSidebar = () => {
       if (!sidebarDrawer || !sidebarBackdrop) return;
@@ -1404,19 +1406,44 @@ document.addEventListener("DOMContentLoaded", () => {
       currentAppMode = mode;
       window.currentAppMode = mode;
 
-      if (mode === "hls") {
+      if (mode === "clips") {
+        if (sidebarOptClips) sidebarOptClips.classList.add("is-active");
+        if (sidebarOptYoutube) sidebarOptYoutube.classList.remove("is-active");
+        if (sidebarOptHls) sidebarOptHls.classList.remove("is-active");
+        if (appModeBadge) {
+          appModeBadge.textContent = "Clips / Recorte";
+          appModeBadge.style.color = "var(--accent-violet)";
+          appModeBadge.style.backgroundColor = "var(--accent-violet-bg)";
+        }
+
+        // Strictly hide YouTube & Stream sections
+        if (heroSection) heroSection.style.display = "none";
+        if (previewSection) previewSection.style.display = "none";
+        if (queueSection) queueSection.style.display = "none";
+        if (streamSection) streamSection.style.display = "none";
+
+        // Show Clip section
+        if (clipSection) {
+          clipSection.style.display = "flex";
+          if (window.clipDownloader) {
+            window.clipDownloader.refreshTasks();
+          }
+        }
+      } else if (mode === "hls") {
         if (sidebarOptHls) sidebarOptHls.classList.add("is-active");
         if (sidebarOptYoutube) sidebarOptYoutube.classList.remove("is-active");
+        if (sidebarOptClips) sidebarOptClips.classList.remove("is-active");
         if (appModeBadge) {
           appModeBadge.textContent = "HLS Stream";
           appModeBadge.style.color = "var(--accent-cyan)";
           appModeBadge.style.backgroundColor = "var(--accent-cyan-bg)";
         }
 
-        // Strictly hide all YouTube sections
+        // Strictly hide all YouTube & Clip sections
         if (heroSection) heroSection.style.display = "none";
         if (previewSection) previewSection.style.display = "none";
         if (queueSection) queueSection.style.display = "none";
+        if (clipSection) clipSection.style.display = "none";
 
         // Show HLS Stream section and refresh stream tasks
         if (streamSection) {
@@ -1429,14 +1456,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // YouTube mode
         if (sidebarOptYoutube) sidebarOptYoutube.classList.add("is-active");
         if (sidebarOptHls) sidebarOptHls.classList.remove("is-active");
+        if (sidebarOptClips) sidebarOptClips.classList.remove("is-active");
         if (appModeBadge) {
           appModeBadge.textContent = "MP3 / MP4";
           appModeBadge.style.color = "";
           appModeBadge.style.backgroundColor = "";
         }
 
-        // Strictly hide HLS Stream section
+        // Strictly hide HLS Stream & Clip sections
         if (streamSection) streamSection.style.display = "none";
+        if (clipSection) clipSection.style.display = "none";
 
         // Restore YouTube sections
         if (heroSection) heroSection.style.display = "";
@@ -1464,6 +1493,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (sidebarOptHls) {
       sidebarOptHls.addEventListener("click", () => switchMode("hls"));
+    }
+    if (sidebarOptClips) {
+      sidebarOptClips.addEventListener("click", () => switchMode("clips"));
     }
   };
 

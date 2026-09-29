@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="css/components.css?v=2.0.4">
   <link rel="stylesheet" href="css/layout.css?v=2.0.4">
   <link rel="stylesheet" href="css/stream_downloader.css?v=2.0.4">
+  <link rel="stylesheet" href="css/clip_downloader.css?v=2.1.3">
 </head>
 <body>
 
@@ -63,6 +64,25 @@
               <span class="sidebar-nav-label">Streams HLS / M3U8</span>
             </div>
             <span class="sidebar-nav-desc">Descarga transmisiones .m3u8 con Referer y cabeceras personalizadas</span>
+          </div>
+        </button>
+
+        <!-- Option 3: Clips / Recortes -->
+        <button type="button" class="sidebar-nav-item" id="sidebar-opt-clips" data-mode="clips">
+          <div class="sidebar-nav-icon is-clips">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <div class="sidebar-nav-content">
+            <div class="sidebar-nav-label-row">
+              <span class="sidebar-nav-label">Clips / Recortes</span>
+            </div>
+            <span class="sidebar-nav-desc">Descarga fragmentos específicos definiendo minutos de inicio y fin</span>
           </div>
         </button>
       </nav>
@@ -341,7 +361,8 @@
           <h2 class="queue-title">Cola de descargas</h2>
           <span class="queue-counter tabular" id="queue-counter">0/0</span>
           <span class="queue-retention-badge" title="Los archivos descargados se conservan en el servidor durante 15 minutos tras completarse">
-            ⏱️ Disponibles 15 min
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Disponibles 15 min
           </span>
         </div>
 
@@ -603,7 +624,8 @@
             <h2 class="queue-title">Cola de descargas de streams</h2>
             <span class="queue-counter tabular" id="stream-queue-counter">0/0</span>
             <span class="queue-retention-badge" title="Los archivos descargados se conservan en el servidor durante 15 minutos tras completarse">
-              ⏱️ Disponibles 15 min
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Disponibles 15 min
             </span>
           </div>
 
@@ -627,6 +649,251 @@
         <!-- Stream Queue Items List Container -->
         <div class="queue-list" id="stream-queue-list">
           <!-- Rendered dynamically by stream_downloader.js -->
+        </div>
+      </section>
+
+    </section>
+
+    <!-- Dedicated Clips Downloader Section (Accessible via Lateral Menu) -->
+    <section class="clip-section" id="clip-downloader-section" style="display: none;">
+      
+      <!-- Clip Header / Top Bar -->
+      <div class="clip-header-bar">
+        <div>
+          <h2 class="clip-main-title">Descarga de Clips y Recortes</h2>
+          <p class="clip-main-subtitle">Recorta segmentos específicos de video o audio definiendo minutos de inicio y fin con precisión.</p>
+        </div>
+      </div>
+
+      <!-- Format selector tabs matching Main Downloader tabs -->
+      <div class="format-tabs-bar" id="clip-format-tabs-bar">
+        <button type="button" class="format-tab-btn" id="clip-tab-mp3" data-format="mp3">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          Audio (MP3)
+        </button>
+        <button type="button" class="format-tab-btn is-active" id="clip-tab-mp4" data-format="mp4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
+          Video (MP4)
+        </button>
+      </div>
+
+      <!-- Main Clip Input & Configuration Card -->
+      <div class="clip-card" id="clip-input-card">
+        <!-- Video URL Input -->
+        <div class="clip-form-group">
+          <label class="clip-form-label" for="clip-url">
+            <span>Enlace del Video (YouTube o plataformas compatibles)</span>
+            <span class="clip-label-hint">Obligatorio</span>
+          </label>
+          <div class="clip-input-wrap">
+            <input 
+              type="url" 
+              id="clip-url" 
+              class="clip-input" 
+              placeholder="https://www.youtube.com/watch?v=..." 
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button type="button" class="btn btn-secondary btn-ghost" id="clip-btn-paste" title="Pegar portapapeles">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              </svg>
+              Pegar
+            </button>
+            <button type="button" class="btn btn-secondary" id="clip-btn-probe" title="Verificar información del video">
+              Verificar
+            </button>
+          </div>
+        </div>
+
+        <!-- Staged Video Preview Box (Dynamic) -->
+        <div class="clip-video-preview" id="clip-video-preview" style="display: none;">
+          <div class="clip-preview-thumb-wrap">
+            <img id="clip-preview-img" class="clip-preview-thumb" src="favicon.svg" alt="Preview" />
+          </div>
+          <div class="clip-preview-info">
+            <div class="clip-preview-title" id="clip-preview-title">Cargando video...</div>
+            <div class="clip-preview-meta">
+              <span id="clip-preview-channel"></span>
+              <span class="clip-preview-duration-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Duración total:</span> <span id="clip-preview-duration">--:--</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time Range Grid: Desde & Hasta -->
+        <div class="clip-time-grid">
+          <!-- Start Time Box -->
+          <div class="clip-time-box">
+            <div class="clip-time-header">
+              <span class="clip-time-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Desde (Inicio del clip)
+              </span>
+              <span class="clip-label-hint">Formato MM:SS</span>
+            </div>
+            <div class="clip-time-input-wrap">
+              <input 
+                type="text" 
+                id="clip-start-time" 
+                class="clip-time-input" 
+                value="00:00" 
+                placeholder="00:00" 
+                autocomplete="off" 
+                spellcheck="false" 
+              />
+            </div>
+            <div class="clip-time-chips">
+              <span class="clip-step-chip" data-time-target="start" data-time-action="zero">00:00</span>
+              <span class="clip-step-chip" data-time-target="start" data-time-action="minus" data-time-amount="10">-10s</span>
+              <span class="clip-step-chip" data-time-target="start" data-time-action="plus" data-time-amount="10">+10s</span>
+              <span class="clip-step-chip" data-time-target="start" data-time-action="plus" data-time-amount="30">+30s</span>
+            </div>
+          </div>
+
+          <!-- End Time Box -->
+          <div class="clip-time-box">
+            <div class="clip-time-header">
+              <span class="clip-time-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Hasta (Fin del clip)
+              </span>
+              <span class="clip-label-hint">Formato MM:SS</span>
+            </div>
+            <div class="clip-time-input-wrap">
+              <input 
+                type="text" 
+                id="clip-end-time" 
+                class="clip-time-input" 
+                value="01:00" 
+                placeholder="01:00" 
+                autocomplete="off" 
+                spellcheck="false" 
+              />
+            </div>
+            <div class="clip-time-chips">
+              <span class="clip-step-chip" data-time-target="end" data-time-action="minus" data-time-amount="10">-10s</span>
+              <span class="clip-step-chip" data-time-target="end" data-time-action="plus" data-time-amount="10">+10s</span>
+              <span class="clip-step-chip" data-time-target="end" data-time-action="plus" data-time-amount="30">+30s</span>
+              <span class="clip-step-chip" data-time-target="end" data-time-action="end">Fin video</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Duration Calculation Ribbon & Validation Message -->
+        <div class="clip-duration-ribbon">
+          <div class="clip-duration-left">
+            <span>Duración estimada del clip:</span>
+            <span class="clip-duration-tag" id="clip-calc-duration">1 min 00 seg</span>
+          </div>
+          <span class="clip-validation-msg" id="clip-validation-msg"></span>
+        </div>
+
+        <!-- Optional Custom Title Input -->
+        <div class="clip-form-group">
+          <label class="clip-form-label" for="clip-title">
+            <span>Nombre personalizado del clip</span>
+            <span class="clip-label-hint">Opcional (Ej: Solo_de_guitarra)</span>
+          </label>
+          <input 
+            type="text" 
+            id="clip-title" 
+            class="clip-input" 
+            placeholder="Ej: Momento_destacado o Parte_1" 
+            autocomplete="off"
+          />
+        </div>
+
+        <!-- Bottom Actions Row: Quality Select & Download Button -->
+        <div class="clip-actions-row">
+          <!-- Custom Quality Select Dropdown -->
+          <div class="custom-select-dropdown" id="clip-quality-dropdown-wrap">
+            <button
+              type="button"
+              class="custom-select-trigger"
+              id="clip-quality-trigger-btn"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              title="Seleccionar calidad del clip"
+            >
+              <span class="custom-select-trigger-content">
+                <span class="custom-select-label">Calidad:</span>
+                <span class="custom-select-value" id="clip-quality-current-label">1080p</span>
+                <span class="custom-select-badge badge-max" id="clip-quality-current-badge">Full HD</span>
+              </span>
+              <svg class="custom-select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+
+            <div class="custom-select-menu" id="clip-quality-options-menu" role="listbox" tabindex="-1">
+              <!-- Dynamically populated by clip_downloader.js -->
+            </div>
+          </div>
+
+          <!-- Main Download Action Button -->
+          <button type="button" class="btn-violet" id="clip-btn-download">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="6" r="3"></circle>
+              <circle cx="6" cy="18" r="3"></circle>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+              <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+            </svg>
+            <span id="clip-btn-download-text">Descargar Clip (MP4)</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Clips Queue Section (Bottom Section) -->
+      <section class="queue-section" id="clip-queue-section" style="display: none;">
+        <div class="queue-header">
+          <div class="queue-title-wrap">
+            <h2 class="queue-title">Cola de descargas de clips</h2>
+            <span class="queue-counter tabular" id="clip-queue-counter">0/0</span>
+            <span class="queue-retention-badge" title="Los archivos recortados se conservan en el servidor durante 15 minutos">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Disponibles 15 min
+            </span>
+          </div>
+
+          <!-- Filter tabs & Batch actions -->
+          <div class="queue-controls">
+            <div class="filter-tabs" id="clip-filter-tabs">
+              <button class="filter-tab active" data-filter="all">Todos</button>
+              <button class="filter-tab" data-filter="downloading">En proceso</button>
+              <button class="filter-tab" data-filter="completed">Completados</button>
+              <button class="filter-tab" data-filter="error">Con error</button>
+            </div>
+
+            <div class="queue-actions">
+              <button type="button" class="btn btn-secondary btn-ghost" id="clip-btn-clear-completed" style="display: none; padding: 6px 10px; font-size: 0.82rem;" title="Limpiar elementos completados">
+                Limpiar completados
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clip Queue Items Container -->
+        <div class="queue-list" id="clip-queue-list">
+          <!-- Rendered dynamically by clip_downloader.js -->
         </div>
       </section>
 
@@ -729,8 +996,8 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Application Scripts -->
-  <script type="module" src="js/app.js?v=2.0.7"></script>
-  <script type="module" src="js/stream_downloader.js?v=2.0.7"></script>
+  <script type="module" src="js/app.js?v=2.1.2"></script>
+  <script type="module" src="js/stream_downloader.js?v=2.1.2"></script>
+  <script type="module" src="js/clip_downloader.js?v=2.1.3"></script>
 </body>
 </html>
