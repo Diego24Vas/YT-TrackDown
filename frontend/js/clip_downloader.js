@@ -218,6 +218,7 @@ class ClipDownloader {
   // Form setup and event listeners
   setupForm() {
     const btnPaste = document.getElementById("clip-btn-paste");
+    const btnResetForm = document.getElementById("clip-btn-reset-form");
     const urlInput = document.getElementById("clip-url");
     const btnProbe = document.getElementById("clip-btn-probe");
     const startInput = document.getElementById("clip-start-time");
@@ -324,6 +325,10 @@ class ClipDownloader {
       });
     }
 
+    if (btnResetForm) {
+      btnResetForm.addEventListener("click", () => this.resetForm());
+    }
+
     if (btnDownload) {
       btnDownload.addEventListener("click", () => this.startDownload());
     }
@@ -334,6 +339,94 @@ class ClipDownloader {
 
     // Initial calculation
     this.validateAndCalcDuration();
+  }
+
+  // Resets all clip downloader form data
+  resetForm() {
+    const urlInput = document.getElementById("clip-url");
+    const previewBox = document.getElementById("clip-video-preview");
+    const previewImg = document.getElementById("clip-preview-img");
+    const previewTitle = document.getElementById("clip-preview-title");
+    const previewChannel = document.getElementById("clip-preview-channel");
+    const previewDuration = document.getElementById("clip-preview-duration");
+    const startInput = document.getElementById("clip-start-time");
+    const endInput = document.getElementById("clip-end-time");
+    const titleInput = document.getElementById("clip-title");
+    const btnProbe = document.getElementById("clip-btn-probe");
+    const durationTag = document.getElementById("clip-calc-duration");
+    const valMsg = document.getElementById("clip-validation-msg");
+    const btnDownload = document.getElementById("clip-btn-download");
+
+    // 1. Reset URL Input
+    if (urlInput) {
+      urlInput.value = "";
+      urlInput.classList.remove("is-invalid");
+    }
+
+    // 2. Hide and reset Staged Preview Box
+    if (previewBox) {
+      previewBox.style.display = "none";
+    }
+    if (previewImg) previewImg.src = "favicon.svg";
+    if (previewTitle) previewTitle.textContent = "Cargando video...";
+    if (previewChannel) previewChannel.textContent = "";
+    if (previewDuration) previewDuration.textContent = "--:--";
+
+    // 3. Reset Start and End Times
+    if (startInput) {
+      startInput.value = "00:00";
+      startInput.classList.remove("is-invalid");
+    }
+
+    if (endInput) {
+      endInput.value = "01:00";
+      endInput.classList.remove("is-invalid");
+    }
+
+    // 4. Reset Custom Title
+    if (titleInput) {
+      titleInput.value = "";
+    }
+
+    // 5. Reset Probe Button State
+    if (btnProbe) {
+      btnProbe.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> <span>Verificar</span>`;
+      btnProbe.disabled = false;
+    }
+
+    // 6. Reset Internal State
+    this.videoDuration = 0;
+    this.lastProbedUrl = "";
+    this.isProbing = false;
+    this.isSubmitting = false;
+
+    // 7. Reset Duration Ribbon and Validation
+    if (durationTag) {
+      durationTag.textContent = "1 min 00 seg";
+    }
+    if (valMsg) {
+      valMsg.textContent = "";
+      valMsg.classList.remove("is-visible");
+    }
+
+    // 8. Re-enable Download Button
+    if (btnDownload) {
+      btnDownload.disabled = false;
+      btnDownload.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="6" cy="6" r="3"></circle>
+          <circle cx="6" cy="18" r="3"></circle>
+          <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
+          <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
+          <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
+        </svg>
+        <span id="clip-btn-download-text">Descargar Clip (${this.currentFormat.toUpperCase()})</span>
+      `;
+    }
+
+    this.validateAndCalcDuration();
+    ui.showToast("Todos los datos han sido limpiados", "info", this.currentFormat);
+    urlInput?.focus();
   }
 
   // Quick Action Buttons (+10s, -10s, 00:00, Fin)

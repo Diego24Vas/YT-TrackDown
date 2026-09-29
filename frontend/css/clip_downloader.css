@@ -102,6 +102,13 @@
   gap: 8px;
 }
 
+.clip-input-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .clip-input {
   flex: 1;
   width: 100%;
@@ -336,6 +343,13 @@
   flex-wrap: wrap;
 }
 
+.clip-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .btn-violet {
   display: inline-flex;
   align-items: center;
@@ -399,4 +413,201 @@
   height: 11px;
   flex-shrink: 0;
   stroke: currentColor;
+}
+
+/* ==========================================================================
+   Mobile & Responsive Adjustments (Phones <= 640px and <= 480px)
+   ========================================================================== */
+@media (max-width: 640px) {
+  .clip-header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .clip-main-title {
+    font-size: 1.25rem;
+  }
+
+  .clip-main-subtitle {
+    font-size: 0.82rem;
+  }
+
+  .clip-card {
+    padding: 14px 12px;
+  }
+
+  /* Form Labels */
+  .clip-form-label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .clip-label-hint {
+    font-size: 0.72rem;
+  }
+
+  /* URL Input + Tools Bar (Prevents squashed inputs on mobile) */
+  .clip-input-wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .clip-input {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-size: 0.85rem;
+    padding: 10px 12px;
+  }
+
+  .clip-input-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .clip-input-tools .btn {
+    width: 100%;
+    padding: 8px 6px;
+    font-size: 0.78rem;
+    justify-content: center;
+  }
+
+  /* Video Preview Staging Card on Mobile */
+  .clip-video-preview {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .clip-preview-thumb-wrap {
+    width: 100%;
+    height: 140px;
+    border-radius: var(--radius-sm);
+  }
+
+  .clip-preview-info {
+    width: 100%;
+  }
+
+  .clip-preview-title {
+    font-size: 0.85rem;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Time Grid (Desde / Hasta) */
+  .clip-time-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .clip-time-box {
+    padding: 10px 12px;
+  }
+
+  .clip-time-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .clip-time-input {
+    font-size: 1.25rem;
+    padding: 10px;
+  }
+
+  .clip-time-chips {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    width: 100%;
+  }
+
+  .clip-step-chip {
+    text-align: center;
+    padding: 7px 4px;
+    font-size: 0.74rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+  }
+
+  /* Duration Calculation Ribbon */
+  .clip-duration-ribbon {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+
+  .clip-duration-left {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .clip-duration-tag {
+    font-size: 0.82rem;
+  }
+
+  /* Bottom Actions Row */
+  .clip-actions-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: var(--space-md);
+  }
+
+  .custom-select-dropdown#clip-quality-dropdown-wrap,
+  #clip-quality-trigger-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .clip-actions-group {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .clip-actions-group #clip-btn-reset-form {
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    white-space: nowrap;
+  }
+
+  .clip-actions-group .btn-violet {
+    width: 100%;
+    padding: 11px 16px;
+    font-size: 0.88rem;
+    justify-content: center;
+  }
+}
+
+/* Extra small devices (phones <= 380px) */
+@media (max-width: 380px) {
+  .clip-input-tools {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+
+  .clip-time-chips {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .clip-actions-group {
+    grid-template-columns: 1fr;
+  }
 }
