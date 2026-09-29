@@ -45,7 +45,6 @@
           <div class="sidebar-nav-content">
             <div class="sidebar-nav-label-row">
               <span class="sidebar-nav-label">YouTube (Estándar)</span>
-              <span class="sidebar-nav-badge badge-active" id="badge-youtube-active">Activo</span>
             </div>
             <span class="sidebar-nav-desc">Descarga MP3 y MP4 de YouTube, SoundCloud y listas</span>
           </div>
@@ -400,8 +399,33 @@
         </div>
       </div>
 
-      <!-- Main Input Card -->
-      <div class="stream-card">
+      <!-- Format selector tabs matching YouTube format tabs -->
+      <div class="format-tabs-bar" id="stream-format-tabs-bar">
+        <button type="button" class="format-tab-btn" id="stream-tab-mp3" data-format="mp3">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"></path>
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="16" r="3"></circle>
+          </svg>
+          Audio (MP3)
+        </button>
+        <button type="button" class="format-tab-btn is-active" id="stream-tab-mp4" data-format="mp4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
+          Video (MP4)
+        </button>
+      </div>
+
+      <!-- Step 1: Main Stream Input & Configuration Card -->
+      <div class="stream-card" id="stream-input-card">
         <!-- Stream URL Input -->
         <div class="stream-form-group">
           <label class="stream-form-label" for="stream-url">
@@ -424,17 +448,8 @@
               </svg>
               Pegar
             </button>
-            <button type="button" class="btn btn-secondary" id="stream-btn-probe" title="Verificar enlace y cabeceras sin descargar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-              </svg>
-              Probar enlace
-            </button>
           </div>
         </div>
-
-        <!-- Probe Result Box -->
-        <div id="stream-probe-card" class="stream-probe-card" style="display: none;"></div>
 
         <!-- Headers Configuration Grid -->
         <div class="stream-grid-2">
@@ -476,33 +491,19 @@
           </div>
         </div>
 
-        <!-- Title & Format Grid -->
-        <div class="stream-grid-2">
-          <!-- Custom Title -->
-          <div class="stream-form-group">
-            <label class="stream-form-label" for="stream-title">
-              <span>Nombre / Título del archivo</span>
-              <span class="stream-label-hint">Opcional</span>
-            </label>
-            <input 
-              type="text" 
-              id="stream-title" 
-              class="stream-input" 
-              placeholder="Ej: Capitulo_01 o Video_Final" 
-              autocomplete="off"
-            />
-          </div>
-
-          <!-- Format Choice -->
-          <div class="stream-form-group">
-            <label class="stream-form-label" for="stream-format">
-              <span>Formato de salida</span>
-            </label>
-            <select id="stream-format" class="stream-input" style="cursor: pointer;">
-              <option value="mp4" selected>Video MP4 (Mejor calidad)</option>
-              <option value="mp3">Audio MP3 (Extraer sólo audio)</option>
-            </select>
-          </div>
+        <!-- Custom Title -->
+        <div class="stream-form-group">
+          <label class="stream-form-label" for="stream-title">
+            <span>Nombre / Título del archivo</span>
+            <span class="stream-label-hint">Opcional</span>
+          </label>
+          <input 
+            type="text" 
+            id="stream-title" 
+            class="stream-input" 
+            placeholder="Ej: Capitulo_01 o Video_Final" 
+            autocomplete="off"
+          />
         </div>
 
         <!-- Advanced Options Details -->
@@ -542,37 +543,92 @@
           </div>
         </details>
 
-        <!-- Submit Action -->
+        <!-- Submit Action: Prepare stream -->
         <div class="stream-actions-bar">
-          <button type="button" class="btn-cyan" id="stream-btn-download">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span>Iniciar Descarga de Stream</span>
+          <button type="button" class="btn-cyan" id="stream-btn-prepare">
+            <span class="btn-prepare-icon-wrap" id="stream-btn-prepare-icon">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </span>
+            <span id="stream-btn-prepare-text">Preparar y verificar stream</span>
           </button>
         </div>
       </div>
 
-      <!-- Stream Tasks List Section -->
-      <div class="stream-tasks-section">
-        <div class="queue-header" style="margin-bottom: 0;">
-          <div class="queue-title-wrap">
-            <h2 class="queue-title">Descargas de Stream</h2>
-            <span class="queue-counter tabular" id="stream-tasks-counter">0</span>
+      <!-- Step 2: Stream Preview / Visualization Section -->
+      <section class="preview-section" id="stream-preview-section" style="display: none;">
+        <div class="preview-header">
+          <div class="preview-title-wrap">
+            <h2 class="preview-title" id="stream-preview-section-title">
+              <span id="stream-preview-title-icon" style="display: inline-flex; align-items: center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                  <line x1="7" y1="2" x2="7" y2="22"></line>
+                  <line x1="17" y1="2" x2="17" y2="22"></line>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                </svg>
+              </span>
+              <span id="stream-preview-title-text">Stream preparado</span>
+            </h2>
+            <span class="queue-counter tabular" id="stream-preview-counter">1</span>
           </div>
-          <div class="queue-actions">
-            <button type="button" class="btn btn-secondary btn-ghost" id="stream-btn-clear-completed" style="display: none; padding: 6px 12px; font-size: 0.82rem;">
-              Limpiar completados
+
+          <div class="preview-actions-bar">
+            <button type="button" class="btn btn-secondary btn-ghost" id="stream-btn-clear-preview" style="padding: 6px 12px; font-size: 0.82rem;">
+              Limpiar
+            </button>
+
+            <button type="button" class="btn btn-success" id="stream-btn-download-preview" style="padding: 8px 16px; font-size: 0.88rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Descargar stream (<span id="stream-preview-btn-format">MP4</span>)</span>
             </button>
           </div>
         </div>
 
-        <div id="stream-tasks-list">
+        <div class="preview-list" id="stream-preview-list">
           <!-- Rendered dynamically by stream_downloader.js -->
         </div>
-      </div>
+      </section>
+
+      <!-- Step 3: Stream Downloads Queue Section (Bottom Section) -->
+      <section class="queue-section" id="stream-queue-section" style="display: none;">
+        <div class="queue-header">
+          <div class="queue-title-wrap">
+            <h2 class="queue-title">Cola de descargas de streams</h2>
+            <span class="queue-counter tabular" id="stream-queue-counter">0/0</span>
+            <span class="queue-retention-badge" title="Los archivos descargados se conservan en el servidor durante 15 minutos tras completarse">
+              ⏱️ Disponibles 15 min
+            </span>
+          </div>
+
+          <!-- Filter tabs & Batch actions -->
+          <div class="queue-controls">
+            <div class="filter-tabs" id="stream-filter-tabs">
+              <button class="filter-tab active" data-filter="all">Todos</button>
+              <button class="filter-tab" data-filter="downloading">En proceso</button>
+              <button class="filter-tab" data-filter="completed">Completados</button>
+              <button class="filter-tab" data-filter="error">Con error</button>
+            </div>
+
+            <div class="queue-actions">
+              <button type="button" class="btn btn-secondary btn-ghost" id="stream-btn-clear-completed" style="display: none; padding: 6px 10px; font-size: 0.82rem;" title="Limpiar elementos completados">
+                Limpiar completados
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stream Queue Items List Container -->
+        <div class="queue-list" id="stream-queue-list">
+          <!-- Rendered dynamically by stream_downloader.js -->
+        </div>
+      </section>
 
     </section>
 
@@ -674,7 +730,7 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- Application Scripts -->
-  <script type="module" src="js/app.js?v=2.0.4"></script>
-  <script type="module" src="js/stream_downloader.js?v=2.0.4"></script>
+  <script type="module" src="js/app.js?v=2.0.7"></script>
+  <script type="module" src="js/stream_downloader.js?v=2.0.7"></script>
 </body>
 </html>

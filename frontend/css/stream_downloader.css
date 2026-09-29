@@ -277,6 +277,18 @@
   transform: none;
 }
 
+.btn-prepare-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Stream Preview & Queue Sections within Stream View */
+#stream-preview-section,
+#stream-queue-section {
+  width: 100%;
+}
+
 /* Probe / Verification Result Box */
 .stream-probe-card {
   margin-top: var(--space-md);

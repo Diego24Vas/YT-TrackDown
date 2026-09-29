@@ -2090,23 +2090,3 @@
   line-height: 1.35;
 }
 
-.sidebar-nav-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: var(--radius-full);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.sidebar-nav-badge.badge-active {
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-emerald);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.sidebar-nav-badge.badge-cyan {
-  background: var(--accent-cyan-bg);
-  color: var(--accent-cyan);
-  border: 1px solid rgba(6, 182, 212, 0.3);
-}

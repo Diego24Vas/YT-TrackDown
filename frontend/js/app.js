@@ -1366,7 +1366,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebarDrawer = document.getElementById("sidebar-drawer");
     const sidebarOptYoutube = document.getElementById("sidebar-opt-youtube");
     const sidebarOptHls = document.getElementById("sidebar-opt-hls");
-    const badgeYoutubeActive = document.getElementById("badge-youtube-active");
     const appModeBadge = document.getElementById("app-mode-badge");
 
     const heroSection = document.getElementById("hero-section");
@@ -1408,7 +1407,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (mode === "hls") {
         if (sidebarOptHls) sidebarOptHls.classList.add("is-active");
         if (sidebarOptYoutube) sidebarOptYoutube.classList.remove("is-active");
-        if (badgeYoutubeActive) badgeYoutubeActive.style.display = "none";
         if (appModeBadge) {
           appModeBadge.textContent = "HLS Stream";
           appModeBadge.style.color = "var(--accent-cyan)";
@@ -1427,13 +1425,10 @@ document.addEventListener("DOMContentLoaded", () => {
             window.streamDownloader.refreshTasks();
           }
         }
-
-        ui.showToast("Modo de descarga: Streams HLS / M3U8", "info", { format: "mp4" });
       } else {
         // YouTube mode
         if (sidebarOptYoutube) sidebarOptYoutube.classList.add("is-active");
         if (sidebarOptHls) sidebarOptHls.classList.remove("is-active");
-        if (badgeYoutubeActive) badgeYoutubeActive.style.display = "inline-flex";
         if (appModeBadge) {
           appModeBadge.textContent = "MP3 / MP4";
           appModeBadge.style.color = "";
@@ -1449,8 +1444,6 @@ document.addEventListener("DOMContentLoaded", () => {
           previewSection.style.display = store.getPreviewItems().length > 0 ? "flex" : "none";
         }
         updateQueueSectionVisibility();
-
-        ui.showToast("Modo de descarga: YouTube (Estándar)", "info", { format: currentFormat });
       }
 
       closeSidebar();
